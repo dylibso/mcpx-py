@@ -11,6 +11,7 @@
 
 ### Environment variables
 
+- `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
 - `XTP_APP_ID`: XTP app ID
 - `XTP_TOKEN`: XTP auth token
 - `XTP_GUEST_KEY`: XTP guest key
