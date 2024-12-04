@@ -31,6 +31,7 @@ server_params = StdioServerParameters(
 
 # Disable node errors
 server_params.env['NODE_NO_WARNINGS'] = '1'
+server_params.env['MCPX_NO_REFRESH'] = '1'
 
 
 async def _get_tools(session):
