@@ -5,8 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "langchain-ollama>=0.2.1",
-    "langchain>=0.3.9",
+    "anthropic>=0.40.0",
     "mcp>=1.0.0",
     "ollama>=0.4.2",
 ]

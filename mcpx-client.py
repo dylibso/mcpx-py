@@ -2,19 +2,33 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from ollama import chat
 from ollama import ChatResponse
+from anthropic import AsyncAnthropic
 
 import os
 import json
 import argparse
 
-mcpx_path = os.environ.get("MCPX_PATH", "../../mcp.run/mcpx/build/index.js")
+SYSTEM_PROMPT = """
+- when evaluating a javascript function code don't print the result to stdout
+  instead just call the generated javascript function on its own since the code
+  will be executed using eval
+- only use tool calls when the prompt fits the use case exactly
+- it is better to be asked for a tool to be used manually than
+  to use a tool that isn't a perfect fit
+"""
+
+
+mcpx_path = os.environ.get("MCPX_PATH", "mcpx")
 
 # Create server parameters for stdio connection
 server_params = StdioServerParameters(
-    command="node",  # Executable
-    args=[mcpx_path],
+    command=mcpx_path,
+    args=[],
     env=os.environ,
 )
+
+# Disable node errors
+server_params.env['NODE_NO_WARNINGS'] = '1'
 
 
 async def _get_tools(session):
@@ -51,7 +65,7 @@ async def tool_cmd(args, session):
             print(c.text)
 
 
-def _convert_tool(tool):
+def _convert_tool_ollama(tool):
     return {
         "type": "function",
         "function": {
@@ -62,21 +76,100 @@ def _convert_tool(tool):
     }
 
 
+def _convert_tool_claude(tool):
+    if not hasattr(tool, 'inputSchema'):
+        return tool
+    tool.input_schema = tool.inputSchema
+    del tool.inputSchema
+    return tool
+
+
+async def claude_provider(messages, msg, args, session, tools):
+    tools = [_convert_tool_claude(t) for _, t in tools]
+    client = AsyncAnthropic()
+    messages.append({
+        'role': 'user',
+        'content': msg,
+    })
+    res = await client.messages.create(
+        max_tokens=1024,
+        messages=messages,
+        model=args.model,
+        tools=tools,
+        system=SYSTEM_PROMPT,
+    )
+    for block in res.content:
+        if args.debug:
+            print(block)
+        if block.type == 'text':
+            messages.append({
+                'role': 'assistant',
+                'content': block.text,
+            })
+            print('>>', block.text)
+        elif block.type == 'tool_use':
+            res = await session.call_tool(
+                block.name,
+                arguments=block.input
+            )
+            for c in res.content:
+                if c.type == 'text':
+                    messages.append({
+                        'role': 'assistant',
+                        'content': c.text,
+                    })
+                    print(">>", c.text)
+
+
+async def ollama_provider(messages, msg, args, session, tools):
+    if len(messages) == 0:
+        messages.append({
+            'role': 'system',
+            'content': SYSTEM_PROMPT
+        })
+    tools = [_convert_tool_ollama(t) for _, t in tools]
+    messages.append({
+        'role': 'user',
+        'content': msg,
+    })
+    response: ChatResponse = chat(
+        model=args.model,
+        stream=False,
+        tools=tools,
+        messages=messages,
+        format=args.format
+    )
+    if response.message.content != '':
+        print(">>", response.message.content)
+        messages.append({
+            'role': 'assistant',
+            'content': response.message.content,
+        })
+    if args.debug:
+        print(response)
+    if response.message.tool_calls is not None:
+        for call in response.message.tool_calls:
+            res = await session.call_tool(
+                call.function.name,
+                arguments=call.function.arguments
+            )
+            for c in res.content:
+                if c.type == 'text':
+                    messages.append({
+                        'role': 'assistant',
+                        'content': c.text,
+                    })
+                    print(">>", c.text)
+
+
 async def chat_cmd(args, session):
+    if args.model is None:
+        if args.provider == "ollama":
+            args.model = "llama3.1"
+        elif args.provider == "claude":
+            args.model = "claude-3-5-sonnet-20241022"
     tools = await _get_tools(session)
-    tools = [_convert_tool(t) for _, t in tools]
-    messages = [{
-        'role': 'system',
-        'content': """
-            - when evaluating code use the eval_js tool, if a prompt does not
-              generate or contain code then do not use eval_js
-            - the greet tool should only be used when saying hello
-            - only use tool calls when the prompt fits the use case exactly
-            - NEVER force tool use when it doesn't make complete sense
-            - it is better to be asked for a tool to be used manually than
-              to use a tool that isn't 100% right
-        """,
-    }]
+    messages = []
     while True:
         try:
             msg = input("> ")
@@ -84,38 +177,13 @@ async def chat_cmd(args, session):
                 break
             if msg == '':
                 continue
-            messages.append({
-                'role': 'user',
-                'content': msg,
-            })
-            response: ChatResponse = chat(
-                model=args.model,
-                stream=False,
-                tools=tools,
-                messages=messages,
-                format=args.format
-            )
-            if response.message.content != '':
-                print(">>", response.message.content)
-                messages.append({
-                    'role': 'assistant',
-                    'content': response.message.content,
-                })
-            if args.debug:
-                print(response)
-            if response.message.tool_calls is not None:
-                for call in response.message.tool_calls:
-                    res = await session.call_tool(
-                        call.function.name,
-                        arguments=call.function.arguments
-                    )
-                    for c in res.content:
-                        if c.type == 'text':
-                            messages.append({
-                                'role': 'assistant',
-                                'content': c.text,
-                            })
-                            print(">>", c.text)
+            if args.provider == 'ollama':
+                await ollama_provider(messages, msg, args, session, tools)
+            elif args.provider == 'claude':
+                await claude_provider(messages, msg, args, session, tools)
+            else:
+                print("Invalid provider:", args.provider)
+                exit(1)
         except Exception as exc:
             s = str(exc)
             if s != '':
@@ -138,7 +206,6 @@ if __name__ == "__main__":
         prog="mcpx-client"
     )
     args.add_argument("--debug", action='store_true', help="Enable debug logging")
-    
     sub = args.add_subparsers(
         title="subcommand",
         help="subcommands",
@@ -158,7 +225,8 @@ if __name__ == "__main__":
     # Chat subcommand
     chat_parser = sub.add_parser("chat")
     chat_parser.set_defaults(func=chat_cmd)
-    chat_parser.add_argument("--model", default="llama3.1", help="ollama model")
+    chat_parser.add_argument("--provider", "-p", choices=["ollama", "claude"], default='claude', help="LLM provider")
+    chat_parser.add_argument("--model", default=None, help="model")
     chat_parser.add_argument("--format", default="", help="Output format")
 
     # Run
