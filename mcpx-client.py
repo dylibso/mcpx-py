@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from ollama import chat
