@@ -18,7 +18,16 @@
 - `XTP_PLUGIN_CACHE_DIR`: XTP plugin cache dir
 - `MCPX_PATH`: optional, specify an alternative `mcpx` executable
 
-### Get usage 
+### uvx
+
+The following examples assume you've cloned the repo and are running commands
+in the root of the project. It's also possible to run `mcpx-client` using `uvx`:
+
+```sh
+uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
+```
+
+### Get usage/help 
 
 ```sh
 uv run mcpx_client.py --help
