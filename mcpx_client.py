@@ -5,6 +5,7 @@ from mcp.client.stdio import stdio_client
 from ollama import chat
 from ollama import ChatResponse
 from anthropic import AsyncAnthropic
+from dotenv import load_dotenv
 
 import os
 import json
@@ -25,6 +26,7 @@ SYSTEM_PROMPT = """
   to use a tool that isn't a perfect fit
 """
 
+load_dotenv()
 
 mcpx_path = os.environ.get("MCPX_PATH", "mcpx")
 
