@@ -1,1 +1,4 @@
 __pycache__
+.mcpx-client-history
+build
+*.egg-info

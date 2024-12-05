@@ -7,6 +7,26 @@
 - `uv`
 - `ollama` (optional)
 
+## Installation
+
+```sh
+uv tool install git+https://github.com/dylibso/mcpx-client
+```
+
+Or from the root of the repo:
+
+```sh
+uv tool install .
+```
+
+### uvx
+
+mcpx-client can also be executed without being installed using `uvx`:
+
+```sh
+uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
+```
+
 ## Running
 
 ### Environment variables
@@ -18,35 +38,26 @@
 - `XTP_PLUGIN_CACHE_DIR`: XTP plugin cache dir
 - `MCPX_PATH`: optional, specify an alternative `mcpx` executable
 
-### uvx
-
-The following examples assume you've cloned the repo and are running commands
-in the root of the project. It's also possible to run `mcpx-client` using `uvx`:
-
-```sh
-uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
-```
-
 ### Get usage/help 
 
 ```sh
-uv run mcpx_client.py --help
+mcpx-client --help
 ```
 
 ### Chat with an LLM
 
 ```sh
-uv run mcpx_client.py chat
+mcpx-client chat
 ```
 
 ### List tools
 
 ```sh
-uv run mcpx_client.py list
+mcpx-client list
 ```
 
 ### Call a tool
 
 ```sh
-uv run mcpx_client.py tool eval_js '{"code": "2+2"}'
+mcpx-client tool eval_js '{"code": "2+2"}'
 ```
