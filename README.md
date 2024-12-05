@@ -1,5 +1,11 @@
 # mcpx-client
 
+A command line utility for working with `mcpx`
+
+- List tools
+- Execute tools directly
+- Use tools with Claude and Ollama
+
 ## Dependencies
 
 - `nodejs`
