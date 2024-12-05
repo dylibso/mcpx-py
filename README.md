@@ -21,23 +21,23 @@
 ### Get usage 
 
 ```sh
-uv run mcpx-client.py --help
+uv run mcpx_client.py --help
 ```
 
 ### Chat with an LLM
 
 ```sh
-uv run mcpx-client.py chat
+uv run mcpx_client.py chat
 ```
 
 ### List tools
 
 ```sh
-uv run mcpx-client.py list
+uv run mcpx_client.py list
 ```
 
 ### Call a tool
 
 ```sh
-uv run mcpx-client.py tool eval_js '{"code": "2+2"}'
+uv run mcpx_client.py tool eval_js '{"code": "2+2"}'
 ```

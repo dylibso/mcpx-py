@@ -237,9 +237,8 @@ async def run(args):
             await args.func(args, session)
 
 
-if __name__ == "__main__":
+def main():
     import asyncio
-
     args = argparse.ArgumentParser(prog="mcpx-client")
     args.add_argument("--debug", action="store_true", help="Enable debug logging")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
@@ -269,3 +268,7 @@ if __name__ == "__main__":
 
     # Run
     asyncio.run(run(args.parse_args()))
+
+
+if __name__ == '__main__':
+    main()
