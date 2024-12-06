@@ -47,13 +47,13 @@ class ChatProvider:
     tools: list
     model: str
 
-    def __init__(self, model):
+    def __init__(self, model=None):
         self.messages = []
         self.tools = []
         self.model = model
 
     def _convert_tool(self, tool):
-        pass
+        return tool
 
     async def chat(self, session, args, msg):
         pass
@@ -71,7 +71,7 @@ class ChatProvider:
 
 async def list_cmd(args, session):
     tools = await ChatProvider().get_tools(session)
-    for _, tool in tools:
+    for tool in tools:
         print()
         print(tool.name)
         print(tool.description)
