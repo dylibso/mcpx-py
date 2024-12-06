@@ -192,7 +192,7 @@ class Claude(ChatProvider):
 async def chat_cmd(args, session):
     if args.model is None:
         if args.provider == "ollama":
-            args.model = "llama3.1"
+            args.model = "llama3.2"
         elif args.provider == "claude":
             args.model = "claude-3-5-sonnet-20241022"
     provider = None
