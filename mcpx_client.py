@@ -209,7 +209,6 @@ async def chat_cmd(args, session):
                     readline.remove_history_item(
                         readline.get_current_history_length() - 1
                     )
-                    os._exit(0)
                 except:
                     pass
                 break
@@ -239,6 +238,7 @@ async def run(args):
             # Initialize the connection
             await session.initialize()
             await args.func(args, session)
+            os._exit(0)
 
 
 def main():
