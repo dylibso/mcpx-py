@@ -40,6 +40,7 @@ server_params = StdioServerParameters(
 # Disable node errors
 server_params.env["NODE_NO_WARNINGS"] = "1"
 server_params.env["MCPX_NO_REFRESH"] = "1"
+server_params.env["LOG_LEVEL"] = "silent"
 
 
 class ChatProvider:
@@ -208,6 +209,7 @@ async def chat_cmd(args, session):
                     readline.remove_history_item(
                         readline.get_current_history_length() - 1
                     )
+                    os._exit(0)
                 except:
                     pass
                 break
