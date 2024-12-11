@@ -230,7 +230,6 @@ async def run(args):
         env["LOG_LEVEL"] = "debug"
     else:
         env["LOG_LEVEL"] = "silent"
-    print(env)
 
     # Create server parameters for stdio connection
     server_params = StdioServerParameters(
