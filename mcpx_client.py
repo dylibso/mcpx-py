@@ -28,19 +28,7 @@ SYSTEM_PROMPT = """
 
 load_dotenv()
 
-mcpx_path = os.environ.get("MCPX_PATH", "mcpx")
-
-# Create server parameters for stdio connection
-server_params = StdioServerParameters(
-    command=mcpx_path,
-    args=[],
-    env=os.environ,
-)
-
-# Disable node errors
-server_params.env["NODE_NO_WARNINGS"] = "1"
-server_params.env["MCPX_NO_REFRESH"] = "1"
-server_params.env["LOG_LEVEL"] = "silent"
+MCPX_PATH = os.environ.get("MCPX_PATH", "mcpx")
 
 
 class ChatProvider:
@@ -83,6 +71,7 @@ async def list_cmd(args, session):
 async def tool_cmd(args, session):
     res = await session.call_tool(args.name, arguments=json.loads(args.input))
     for c in res.content:
+        print(c)
         if c.type == "text":
             print(c.text)
 
@@ -233,6 +222,23 @@ async def run(args):
     except:
         pass
 
+    env = os.environ.copy()
+    # Disable node errors
+    env["NODE_NO_WARNINGS"] = "1"
+    env["MCP_RUN_ORIGIN"] = args.origin
+    if args.debug:
+        env["LOG_LEVEL"] = "debug"
+    else:
+        env["LOG_LEVEL"] = "silent"
+    print(env)
+
+    # Create server parameters for stdio connection
+    server_params = StdioServerParameters(
+        command="npx",
+        args=["@dylibso/mcpx", "--yes"],
+        env=env,
+    )
+
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             # Initialize the connection
@@ -243,8 +249,10 @@ async def run(args):
 
 def main():
     import asyncio
+
     args = argparse.ArgumentParser(prog="mcpx-client")
     args.add_argument("--debug", action="store_true", help="Enable debug logging")
+    args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
     # List subcommand
@@ -274,5 +282,5 @@ def main():
     asyncio.run(run(args.parse_args()))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
