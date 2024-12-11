@@ -69,11 +69,23 @@ async def list_cmd(args, session):
 
 
 async def tool_cmd(args, session):
-    res = await session.call_tool(args.name, arguments=json.loads(args.input))
-    for c in res.content:
-        print(c)
-        if c.type == "text":
-            print(c.text)
+    try:
+        # Validate JSON input
+        if args.input:
+            try:
+                tool_args = json.loads(args.input)
+            except json.JSONDecodeError:
+                print("ERROR: Invalid JSON input")
+                return
+        else:
+            tool_args = {}
+
+        res = await session.call_tool(args.name, arguments=tool_args)
+        for c in res.content:
+            if c.type == "text":
+                print(c.text)
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
 
 
 class Ollama(ChatProvider):
@@ -179,6 +191,15 @@ class Claude(ChatProvider):
                         print(">>", c.text)
 
 
+CHAT_HELP = """
+Available commands:
+  !help    - Show this help message
+  !clear   - Clear chat history
+  !exit    - Exit the chat
+  !tools   - List available tools
+"""
+
+
 async def chat_cmd(args, session):
     if args.model is None:
         if args.provider == "ollama":
@@ -192,15 +213,26 @@ async def chat_cmd(args, session):
         provider = Claude(args.model)
     while True:
         try:
-            msg = input("> ")
-            if msg == "exit" or msg == "quit":
-                try:
-                    readline.remove_history_item(
-                        readline.get_current_history_length() - 1
-                    )
-                except:
-                    pass
-                break
+            msg = input("> ").strip()
+
+            # Handle special commands
+            if msg.startswith("!") or msg == 'exit' or msg == 'quit':
+                if msg == "!help":
+                    print(CHAT_HELP)
+                    continue
+                elif msg == "!clear":
+                    provider.messages = []
+                    print("Chat history cleared")
+                    continue
+                elif msg == "!tools":
+                    tools = await provider.get_tools(session)
+                    print("\nAvailable tools:")
+                    for tool in tools:
+                        print(f"- {tool.name}")
+                    continue
+                elif msg in ["!exit", "!quit", 'exit', 'quit']:
+                    print("Goodbye!")
+                    break
             if msg == "":
                 continue
             await provider.chat(session, args, msg)
@@ -214,13 +246,24 @@ async def chat_cmd(args, session):
 
 
 async def run(args):
+    # Setup command history
+    histfile = os.path.join(
+        os.environ.get("XTP_PLUGIN_CACHE_DIR", "."), ".mcpx-client-history"
+    )
     try:
-        histfile = os.environ.get("XTP_PLUGIN_CACHE_DIR", ".") + "/.mcpx-client-history"
-        atexit.register(readline.write_history_file, histfile)
+        os.makedirs(os.path.dirname(histfile), exist_ok=True)
         readline.set_history_length(1000)
-        readline.read_history_file(histfile)
-    except:
-        pass
+
+        # Try to read existing history
+        try:
+            readline.read_history_file(histfile)
+        except FileNotFoundError:
+            pass
+
+        # Register history save on exit
+        atexit.register(readline.write_history_file, histfile)
+    except Exception as e:
+        print(f"Warning: Could not setup command history: {str(e)}")
 
     env = os.environ.copy()
     # Disable node errors
@@ -231,14 +274,14 @@ async def run(args):
     else:
         env["LOG_LEVEL"] = "silent"
 
-    if hasattr(args, 'path'):
+    if hasattr(args, "path"):
         paths = {}
         for p in args.path:
-            s = p.split(':')
+            s = p.split(":")
             if len(s) == 1:
                 s.append(s[0])
             paths[s[0]] = s[1]
-        env['ALLOWED_PATHS'] = json.dumps(paths)
+        env["ALLOWED_PATHS"] = json.dumps(paths)
 
     # if hasattr(args, 'host'):
     #     env['ALLOWED_HOSTS'] = json.dumps(paths)
@@ -288,8 +331,8 @@ def main():
     )
     chat_parser.add_argument("--model", default=None, help="model")
     chat_parser.add_argument("--format", default="", help="Output format")
-    chat_parser.add_argument("--path", nargs='*', default=[], help="Allow path") 
-    # chat_parser.add_argument("--host", nargs='*', default=[], help="Allow host") 
+    chat_parser.add_argument("--path", nargs="*", default=[], help="Allow path")
+    # chat_parser.add_argument("--host", nargs='*', default=[], help="Allow host")
 
     # Run
     asyncio.run(run(args.parse_args()))
