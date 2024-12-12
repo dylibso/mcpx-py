@@ -88,6 +88,16 @@ async def tool_cmd(args, session):
         print(f"Unexpected error: {str(e)}")
 
 
+async def login_cmd(args, session):
+    try:
+        res = await session.call_tool("mcp_run_login", arguments={})
+        for c in res.content:
+            if c.type == "text":
+                print(c.text)
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+
+
 class Ollama(ChatProvider):
     def _convert_tool(self, tool):
         return {
@@ -101,7 +111,7 @@ class Ollama(ChatProvider):
 
     async def chat(self, session, args, msg):
         if len(self.messages) == 0:
-            self.messages.append({"role": "system", "content": SYSTEM_PROMPT})
+            self.messages.append({"role": "system", "content": args.system})
         await self.get_tools(session)
         self.messages.append(
             {
@@ -165,7 +175,7 @@ class Claude(ChatProvider):
             messages=self.messages,
             model=self.model,
             tools=self.tools,
-            system=SYSTEM_PROMPT,
+            system=args.system,
         )
         for block in res.content:
             if args.debug:
@@ -269,7 +279,7 @@ async def run(args):
     # Disable node errors
     env["NODE_NO_WARNINGS"] = "1"
     env["MCP_RUN_ORIGIN"] = args.origin
-    if args.debug:
+    if args.mcpx_debug:
         env["LOG_LEVEL"] = "debug"
     else:
         env["LOG_LEVEL"] = "silent"
@@ -306,12 +316,17 @@ def main():
 
     args = argparse.ArgumentParser(prog="mcpx-client")
     args.add_argument("--debug", action="store_true", help="Enable debug logging")
+    args.add_argument("--mcpx-debug", action="store_true", help="Enable debug logging for mcpx")
     args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
     # List subcommand
     list_parser = sub.add_parser("list")
     list_parser.set_defaults(func=list_cmd)
+
+    # Login parser
+    login_parser = sub.add_parser("login")
+    login_parser.set_defaults(func=login_cmd)
 
     # Tool subcommand
     tool_parser = sub.add_parser("tool")
@@ -329,7 +344,8 @@ def main():
         default="claude",
         help="LLM provider",
     )
-    chat_parser.add_argument("--model", default=None, help="model")
+    chat_parser.add_argument("--model", default=None, help="Model name")
+    chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
     chat_parser.add_argument("--format", default="", help="Output format")
     chat_parser.add_argument("--path", nargs="*", default=[], help="Allow path")
     # chat_parser.add_argument("--host", nargs='*', default=[], help="Allow host")
