@@ -207,6 +207,7 @@ Available commands:
   !clear   - Clear chat history
   !exit    - Exit the chat
   !tools   - List available tools
+  !sh      - Execute a shell command
 """
 
 
@@ -239,6 +240,9 @@ async def chat_cmd(args, session):
                     print("\nAvailable tools:")
                     for tool in tools:
                         print(f"- {tool.name}")
+                    continue
+                elif msg.startswith("!sh "):
+                    os.system(msg[4:])
                     continue
                 elif msg in ["!exit", "!quit", 'exit', 'quit']:
                     print("Goodbye!")
@@ -284,19 +288,10 @@ async def run(args):
     else:
         env["LOG_LEVEL"] = "silent"
 
-    if hasattr(args, "path"):
-        paths = {}
-        for p in args.path:
-            s = p.split(":")
-            if len(s) == 1:
-                s.append(s[0])
-            paths[s[0]] = s[1]
-        env["ALLOWED_PATHS"] = json.dumps(paths)
-
-    # if hasattr(args, 'host'):
-    #     env['ALLOWED_HOSTS'] = json.dumps(paths)
-
     # Create server parameters for stdio connection
+
+    print(env)
+
     server_params = StdioServerParameters(
         command="npx",
         args=["@dylibso/mcpx", "--yes"],
@@ -347,8 +342,6 @@ def main():
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
     chat_parser.add_argument("--format", default="", help="Output format")
-    chat_parser.add_argument("--path", nargs="*", default=[], help="Allow path")
-    # chat_parser.add_argument("--host", nargs='*', default=[], help="Allow host")
 
     # Run
     asyncio.run(run(args.parse_args()))
