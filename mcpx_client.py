@@ -44,7 +44,7 @@ class ChatProvider:
     def _convert_tool(self, tool):
         return tool
 
-    async def chat(self, session, args, msg):
+    async def chat(self, session, args, msg, tool=None):
         pass
 
     async def get_tools(self, session):
@@ -109,14 +109,14 @@ class Ollama(ChatProvider):
             },
         }
 
-    async def chat(self, session, args, msg):
+    async def chat(self, session, args, msg, tool=None):
         if len(self.messages) == 0:
             self.messages.append({"role": "system", "content": args.system})
         await self.get_tools(session)
         self.messages.append(
             {
                 "role": "user",
-                "content": msg,
+                "content": msg if tool is None else f"Result of {tool}: {msg}",
             }
         )
         response: ChatResponse = chat(
@@ -143,13 +143,8 @@ class Ollama(ChatProvider):
                 )
                 for c in res.content:
                     if c.type == "text":
-                        self.messages.append(
-                            {
-                                "role": "assistant",
-                                "content": c.text,
-                            }
-                        )
-                        print(">>", c.text)
+                        await self.chat(session, args, c.text, tool=call.function.name)
+                        # print(">>", c.text)
 
 
 class Claude(ChatProvider):
@@ -160,14 +155,14 @@ class Claude(ChatProvider):
         del tool.inputSchema
         return tool
 
-    async def chat(self, session, args, msg):
+    async def chat(self, session, args, msg, tool=None):
         # TODO: maybe avoid fetching tools for each prompt
         await self.get_tools(session)
         client = AsyncAnthropic()
         self.messages.append(
             {
                 "role": "user",
-                "content": msg,
+                "content": msg if tool is None else f"Result of {tool}: {msg}",
             }
         )
         res = await client.messages.create(
@@ -192,13 +187,14 @@ class Claude(ChatProvider):
                 res = await session.call_tool(block.name, arguments=block.input)
                 for c in res.content:
                     if c.type == "text":
-                        self.messages.append(
-                            {
-                                "role": "assistant",
-                                "content": c.text,
-                            }
-                        )
-                        print(">>", c.text)
+                        # self.messages.append(
+                        #     {
+                        #         "role": "assistant",
+                        #         "content": c.text,
+                        #     }
+                        # )
+                        # print(">>", c.text)
+                        await self.chat(session, args, c.text, tool=block.name)
 
 
 CHAT_HELP = """
