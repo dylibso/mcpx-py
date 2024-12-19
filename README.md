@@ -4,11 +4,11 @@ A command line utility for working with `mcpx`
 
 - List tools
 - Execute tools directly
-- Use tools with Claude and Ollama
+- Use tools with Claude, Ollama and ChatGPT
 
 ## Dependencies
 
-- `nodejs`
+- `npx`
 - `mcpx` should be in your `$PATH`
 - `uv`
 - `ollama` (optional)
@@ -38,6 +38,7 @@ uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
 ### Environment variables
 
 - `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
+- `OPENAI_API_KEY`: used to configure API key when using the `openai` provider
 - `XTP_APP_ID`: XTP app ID
 - `XTP_TOKEN`: XTP auth token
 - `XTP_GUEST_KEY`: XTP guest key
