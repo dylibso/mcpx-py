@@ -12,9 +12,9 @@ SYSTEM_PROMPT = """
 - when evaluating a javascript function code don't print the result to stdout
   instead just call the generated javascript function on its own since the code
   will be executed using eval
-- only use tool calls when the prompt fits the use case exactly
-- it is better to be asked for a tool to be used manually than
-  to use a tool that isn't a perfect fit
+- Do not come up with directions or indications. Always use the provided functions
+- Invoke the tools upon requests you cannot fulfill on your own and parse the responses
+- Always try to provide a well formatted, itemized summary
 """
 
 
@@ -32,10 +32,11 @@ class ChatProvider:
     tools: list
     model: str
 
-    def __init__(self, config: ChatConfig):
+    def __init__(self, config: ChatConfig, print=print):
         self.messages = []
         self.tools = []
         self.config = config
+        self.print = print
 
     def _convert_tool(self, tool: Tool):
         return tool
@@ -71,7 +72,7 @@ class Ollama(ChatProvider):
         self.messages.append(
             {
                 "role": "user",
-                "content": msg if tool is None else f"Result of {tool}: {msg}",
+                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
             }
         )
         response: ChatResponse = chat(
@@ -82,9 +83,9 @@ class Ollama(ChatProvider):
             format=self.config.format,
         )
         if self.config.debug:
-            print(response)
+            self.print(response)
         if response.message.content is not None and response.message.content != "":
-            print(">>", response.message.content)
+            self.print(">>", response.message.content)
             self.messages.append(
                 {
                     "role": "assistant",
@@ -102,7 +103,6 @@ class Ollama(ChatProvider):
                 for c in res.content:
                     if c.type == "text":
                         await self.chat(c.text, tool=call.function.name)
-                        # print(">>", c.text)
 
 
 class OpenAI(ChatProvider):
@@ -124,7 +124,7 @@ class OpenAI(ChatProvider):
         self.messages.append(
             {
                 "role": "user",
-                "content": msg if tool is None else f"Result of {tool}: {msg}",
+                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
             }
         )
         r = self.client.chat.completions.create(
@@ -132,9 +132,9 @@ class OpenAI(ChatProvider):
         )
         for response in r.choices:
             if self.config.debug:
-                print(response)
+                self.print(response)
             if response.message.content is not None and response.message.content != "":
-                print(">>", response.message.content)
+                self.print(">>", response.message.content)
                 self.messages.append(
                     {
                         "role": "assistant",
@@ -168,7 +168,7 @@ class Claude(ChatProvider):
         self.messages.append(
             {
                 "role": "user",
-                "content": msg if tool is None else f"Result of {tool}: {msg}",
+                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
             }
         )
         res = await self.client.messages.create(
@@ -180,7 +180,7 @@ class Claude(ChatProvider):
         )
         for block in res.content:
             if self.config.debug:
-                print(block)
+                self.print(block)
             if block.type == "text":
                 self.messages.append(
                     {
@@ -188,7 +188,7 @@ class Claude(ChatProvider):
                         "content": block.text,
                     }
                 )
-                print(">>", block.text)
+                self.print(">>", block.text)
             elif block.type == "tool_use":
                 res = await self.config.session.call_tool(
                     block.name, arguments=block.input
