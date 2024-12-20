@@ -19,5 +19,5 @@ dev-dependencies = [
     "ruff>=0.8.1",
 ]
 
-# [project.scripts]
-# mcpx-client = "mcpx-client"
+[project.scripts]
+mcpx-client = "mcpx-client"
