@@ -70,6 +70,8 @@ class Ollama(ChatProvider):
             messages=self.messages,
             format=args.format,
         )
+        if args.debug:
+            print(response)
         if response.message.content is not None and response.message.content != "":
             print(">>", response.message.content)
             self.messages.append(
@@ -78,8 +80,6 @@ class Ollama(ChatProvider):
                     "content": response.message.content,
                 }
             )
-        if args.debug:
-            print(response)
         if response.message.tool_calls is not None:
             for call in response.message.tool_calls:
                 f = call.function.arguments
@@ -120,6 +120,8 @@ class OpenAI(ChatProvider):
         r = self.client.chat.completions.create(
             messages=self.messages, model=args.model, tools=self.tools)
         for response in r.choices:
+            if args.debug:
+                print(response)
             if response.message.content is not None and response.message.content != "":
                 print(">>", response.message.content)
                 self.messages.append(
@@ -128,8 +130,6 @@ class OpenAI(ChatProvider):
                         "content": response.message.content,
                     }
                 )
-            if args.debug:
-                print(response)
             if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
                     f = call.function.arguments
