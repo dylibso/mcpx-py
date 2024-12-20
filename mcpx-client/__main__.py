@@ -4,6 +4,7 @@ import readline
 import atexit
 import argparse
 import json
+import psutil
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -128,6 +129,12 @@ async def chat_cmd(args, session):
             break
 
 
+def killtree(pid):
+    parent = psutil.Process(pid)
+    for child in parent.children(recursive=True):
+        child.kill()
+
+
 async def run(args):
     # Setup command history
     histfile = os.path.join(
@@ -163,7 +170,7 @@ async def run(args):
 
     server_params = StdioServerParameters(
         command="npx",
-        args=["@dylibso/mcpx", "--yes"],
+        args=["--yes", "@dylibso/mcpx"],
         env=env,
     )
 
@@ -174,7 +181,7 @@ async def run(args):
             await args.func(args, session)
             session._read_stream.close()
             session._write_stream.close()
-            os._exit(0)
+            killtree(os.getpid())
 
 
 def main():
