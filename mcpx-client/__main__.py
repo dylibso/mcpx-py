@@ -9,7 +9,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatProvider, SYSTEM_PROMPT
+from . import Claude, OpenAI, Ollama, ChatProvider, SYSTEM_PROMPT, ChatConfig
 
 CHAT_HELP = """
 Available commands:
@@ -60,6 +60,46 @@ async def login_cmd(args, session):
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
 
+
+async def chat_loop(provider):
+    try:
+        msg = input("> ").strip()
+
+        # Handle special commands
+        if msg.startswith("!") or msg == "exit" or msg == "quit":
+            if msg == "!help":
+                print(CHAT_HELP)
+                return True
+            elif msg == "!clear":
+                provider.messages = []
+                print("Chat history cleared")
+                return True
+            elif msg == "!tools":
+                tools = await provider.get_tools(provider.config.session)
+                print("\nAvailable tools:")
+                for tool in tools:
+                    print(f"- {tool.name}")
+                return True
+            elif msg.startswith("!sh "):
+                os.system(msg[4:])
+                return True
+            elif msg in ["!exit", "!quit", "exit", "quit"]:
+                print("Goodbye!")
+                return False
+        if msg == "":
+            return True
+        # TODO: maybe avoid fetching tools for each prompt
+        await provider.get_tools()
+        await provider.chat(msg)
+    except Exception as exc:
+        s = str(exc)
+        if s != "":
+            print("\nERROR>>", exc)
+        else:
+            print()
+    return True
+
+
 async def chat_cmd(args, session):
     if args.model is None:
         if args.provider == "ollama":
@@ -68,50 +108,24 @@ async def chat_cmd(args, session):
             args.model = "claude-3-5-sonnet-20241022"
         elif args.provider == "openai":
             args.model = "gpt-4o"
+    config = ChatConfig(
+        session=session,
+        model=args.model,
+        system=args.system,
+        format=args.format,
+        debug=args.debug,
+    )
     provider = None
     if args.provider == "ollama":
-        provider = Ollama(args.model)
+        provider = Ollama(config)
     elif args.provider == "claude":
-        provider = Claude(args.model)
+        provider = Claude(config)
     elif args.provider == "openai":
-        provider = OpenAI(args.model)
+        provider = OpenAI(config)
     while True:
-        try:
-            msg = input("> ").strip()
-
-            # Handle special commands
-            if msg.startswith("!") or msg == 'exit' or msg == 'quit':
-                if msg == "!help":
-                    print(CHAT_HELP)
-                    continue
-                elif msg == "!clear":
-                    provider.messages = []
-                    print("Chat history cleared")
-                    continue
-                elif msg == "!tools":
-                    tools = await provider.get_tools(session)
-                    print("\nAvailable tools:")
-                    for tool in tools:
-                        print(f"- {tool.name}")
-                    continue
-                elif msg.startswith("!sh "):
-                    os.system(msg[4:])
-                    continue
-                elif msg in ["!exit", "!quit", 'exit', 'quit']:
-                    print("Goodbye!")
-                    break
-            if msg == "":
-                continue
-            # TODO: maybe avoid fetching tools for each prompt
-            await provider.get_tools(session)
-            await provider.chat(session, args, msg)
-        except Exception as exc:
-            s = str(exc)
-            if s != "":
-                print("\nERROR>>", exc)
-            else:
-                print()
-            continue
+        ok = await chat_loop(provider)
+        if not ok:
+            break
 
 
 async def run(args):
@@ -168,7 +182,9 @@ def main():
 
     args = argparse.ArgumentParser(prog="mcpx-client")
     args.add_argument("--debug", action="store_true", help="Enable debug logging")
-    args.add_argument("--mcpx-debug", action="store_true", help="Enable debug logging for mcpx")
+    args.add_argument(
+        "--mcpx-debug", action="store_true", help="Enable debug logging for mcpx"
+    )
     args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
