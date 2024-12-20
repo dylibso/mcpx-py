@@ -22,7 +22,7 @@ SYSTEM_PROMPT = """
 class ChatConfig:
     session: ClientSession
     model: str
-    system: str = ""
+    system: str = SYSTEM_PROMPT
     format: Optional[str] = None
     debug: bool = False
 
@@ -97,6 +97,7 @@ class Ollama(ChatProvider):
                 f = call.function.arguments
                 if isinstance(f, str):
                     f = json.loads(f)
+                self.print(">>", f"Calling tool: {call.function.name}")
                 res = await self.config.session.call_tool(
                     call.function.name, arguments=f
                 )
@@ -146,6 +147,7 @@ class OpenAI(ChatProvider):
                     f = call.function.arguments
                     if isinstance(f, str):
                         f = json.loads(f)
+                    self.print(">>", f"Calling tool: {call.function.name}")
                     res = await self.config.session.call_tool(
                         call.function.name, arguments=f
                     )
@@ -190,6 +192,7 @@ class Claude(ChatProvider):
                 )
                 self.print(">>", block.text)
             elif block.type == "tool_use":
+                self.print(">>", f"Calling tool: {block.name}")
                 res = await self.config.session.call_tool(
                     block.name, arguments=block.input
                 )
