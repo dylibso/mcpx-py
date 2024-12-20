@@ -1,7 +1,7 @@
-from ollama import chat
+from ollama import Client as OllamaClient
 from ollama import ChatResponse
 from anthropic import AsyncAnthropic
-from openai import OpenAI as ChatGPT
+from openai import OpenAI as OpenAIClient
 from mcp import ClientSession, Tool
 
 import json
@@ -22,6 +22,7 @@ SYSTEM_PROMPT = """
 class ChatConfig:
     session: ClientSession
     model: str
+    url: Optional[str] = None
     system: str = SYSTEM_PROMPT
     format: Optional[str] = None
     debug: bool = False
@@ -67,6 +68,8 @@ class Ollama(ChatProvider):
         }
 
     async def chat(self, msg: str, tool: Optional[str] = None):
+        if not hasattr(self, "client"):
+            self.client = OllamaClient(host=self.config.url)
         if len(self.messages) == 0:
             self.messages.append({"role": "system", "content": self.config.system})
         self.messages.append(
@@ -75,7 +78,7 @@ class Ollama(ChatProvider):
                 "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
             }
         )
-        response: ChatResponse = chat(
+        response: ChatResponse = self.client.chat(
             model=self.config.model,
             stream=False,
             tools=self.tools,
@@ -121,7 +124,7 @@ class OpenAI(ChatProvider):
         if len(self.messages) == 0:
             self.messages.append({"role": "system", "content": self.config.system})
         if not hasattr(self, "client"):
-            self.client = ChatGPT()
+            self.client = OpenAIClient(base_url=self.config.url)
         self.messages.append(
             {
                 "role": "user",
@@ -166,7 +169,7 @@ class Claude(ChatProvider):
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         if not hasattr(self, "client"):
-            self.client = AsyncAnthropic()
+            self.client = AsyncAnthropic(base_url=self.config.url)
         self.messages.append(
             {
                 "role": "user",

@@ -112,6 +112,7 @@ async def chat_cmd(args, session):
     config = ChatConfig(
         session=session,
         model=args.model,
+        url=args.url,
         system=args.system,
         format=args.format,
         debug=args.debug,
@@ -218,6 +219,12 @@ def main():
         choices=["ollama", "claude", "openai"],
         default="claude",
         help="LLM provider",
+    )
+    chat_parser.add_argument(
+        "--url",
+        "-u",
+        default=None,
+        help="Provider endpoint URL"
     )
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
