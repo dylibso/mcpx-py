@@ -20,4 +20,4 @@ dev-dependencies = [
 ]
 
 [project.scripts]
-mcpx-client = "mcpx-client.__main__:main"
+mcpx-client = "mcpx_client.__main__:main"
