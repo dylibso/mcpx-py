@@ -158,6 +158,8 @@ async def run(args):
             # Initialize the connection
             await session.initialize()
             await args.func(args, session)
+            session._read_stream.close()
+            session._write_stream.close()
             os._exit(0)
 
 
