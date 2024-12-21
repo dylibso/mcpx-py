@@ -5,6 +5,7 @@ A command line utility for working with `mcpx`
 - List tools
 - Execute tools directly
 - Use tools with Claude, Ollama and ChatGPT
+  - Llamafile is also supported using the `openai` provider, see https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart
 
 ## Dependencies
 
