@@ -74,8 +74,8 @@ class Ollama(ChatProvider):
             self.messages.append({"role": "system", "content": self.config.system})
         self.messages.append(
             {
-                "role": "user",
-                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
+                "role": "user" if tool is None else "tool",
+                "content": msg if tool is None else f"Result of {tool}:\n{msg}",
             }
         )
         response: ChatResponse = self.client.chat(
