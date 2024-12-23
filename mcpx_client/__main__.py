@@ -220,12 +220,7 @@ def main():
         default="claude",
         help="LLM provider",
     )
-    chat_parser.add_argument(
-        "--url",
-        "-u",
-        default=None,
-        help="Provider endpoint URL"
-    )
+    chat_parser.add_argument("--url", "-u", default=None, help="Provider endpoint URL")
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
     chat_parser.add_argument("--format", default="", help="Output format")

@@ -12,14 +12,21 @@ SYSTEM_PROMPT = """
 - when evaluating a javascript function code don't print the result to stdout
   instead just call the generated javascript function on its own since the code
   will be executed using eval
-- Do not come up with directions or indications. Always use the provided functions
-- Invoke the tools upon requests you cannot fulfill on your own and parse the responses
+- Do not come up with directions or indications.
+- Always use the provided functions when applicable, and share the results of
+  tool calls with the user
+- Invoke the tools upon requests you cannot fulfill on your own
+  and parse the responses
 - Always try to provide a well formatted, itemized summary
 """
 
 
 @dataclass
 class ChatConfig:
+    """
+    Stores configuration and session for chats
+    """
+
     session: ClientSession
     model: str
     url: Optional[str] = None
@@ -29,6 +36,10 @@ class ChatConfig:
 
 
 class ChatProvider:
+    """
+    Defines the interface for all chat provider implementations
+    """
+
     messages: list
     tools: list
     model: str
@@ -40,12 +51,23 @@ class ChatProvider:
         self.print = print
 
     def _convert_tool(self, tool: Tool):
+        """
+        Convert a tool from mcp.Tool to the expected format
+        for the given provider
+        """
         return tool
 
     async def chat(self, msg: str, tool: Optional[str] = None):
+        """
+        Handle chat message, if `tool` is set then the message is the result
+        of a tool call
+        """
         pass
 
     async def get_tools(self):
+        """
+        Get all tools from the mcp server
+        """
         tools = await self.config.session.list_tools()
         self.tools = []
         for name, t in tools:
@@ -57,6 +79,10 @@ class ChatProvider:
 
 
 class Ollama(ChatProvider):
+    """
+    Chat using ollama
+    """
+
     def _convert_tool(self, tool):
         return {
             "type": "function",
@@ -87,12 +113,13 @@ class Ollama(ChatProvider):
         )
         if self.config.debug:
             self.print(response)
-        if response.message.content is not None and response.message.content != "":
-            self.print(">>", response.message.content)
+        content = response.message.content
+        if content is not None and content != "":
+            self.print(">>", content)
             self.messages.append(
                 {
                     "role": "assistant",
-                    "content": response.message.content,
+                    "content": content,
                 }
             )
         if response.message.tool_calls is not None:
@@ -110,6 +137,10 @@ class Ollama(ChatProvider):
 
 
 class OpenAI(ChatProvider):
+    """
+    Chat using the OpenAI API
+    """
+
     def _convert_tool(self, tool):
         return {
             "type": "function",
@@ -128,7 +159,9 @@ class OpenAI(ChatProvider):
         self.messages.append(
             {
                 "role": "user",
-                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
+                "content": msg
+                if tool is None
+                else f"Result of {tool} tool call:\n{msg}",
             }
         )
         r = self.client.chat.completions.create(
@@ -137,12 +170,13 @@ class OpenAI(ChatProvider):
         for response in r.choices:
             if self.config.debug:
                 self.print(response)
-            if response.message.content is not None and response.message.content != "":
-                self.print(">>", response.message.content)
+            content = response.message.content
+            if content is not None and content != "":
+                self.print(">>", content)
                 self.messages.append(
                     {
                         "role": "assistant",
-                        "content": response.message.content,
+                        "content": content,
                     }
                 )
             if response.message.tool_calls is not None:
@@ -160,6 +194,10 @@ class OpenAI(ChatProvider):
 
 
 class Claude(ChatProvider):
+    """
+    Chat using the Claude API
+    """
+
     def _convert_tool(self, tool):
         if not hasattr(tool, "inputSchema"):
             return tool
@@ -173,7 +211,9 @@ class Claude(ChatProvider):
         self.messages.append(
             {
                 "role": "user",
-                "content": msg if tool is None else f"Result of {tool} tool call:\n{msg}",
+                "content": msg
+                if tool is None
+                else f"Result of {tool} tool call:\n{msg}",
             }
         )
         res = await self.client.messages.create(
