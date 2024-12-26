@@ -74,10 +74,9 @@ class ChatProvider:
             if t is None:
                 continue
             for tool in t:
+                if self.config.debug:
+                    self.print("FOUND TOOL:", tool.name)
                 self.tools.append(self._convert_tool(tool))
-        if self.config.debug:
-            for tool in self.tools:
-                self.print("FOUND TOOL:", tool.name)
         return self.tools
 
 
