@@ -1,11 +1,25 @@
 # mcpx-client
 
-A command line utility for working with `mcpx`
+A command line client for working with `mcpx` and https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools through the MCP platform.
 
-- List tools
-- Execute tools directly
-- Use tools with Claude, Ollama and ChatGPT
-  - Llamafile is also supported using the `openai` provider, see https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart
+## Features
+
+### Tool Management
+- **List Tools**: Browse available tools and their capabilities
+- **Direct Tool Execution**: Run tools with specific inputs without LLM interaction
+- **Tool Integration**: Use tools seamlessly within AI chat conversations
+
+### AI Provider Support
+- **Claude**: Anthropic's Claude models via API
+- **Ollama**: Local open-source LLMs
+- **ChatGPT**: OpenAI's GPT models
+- **Llamafile**: Local AI using Mozilla's Llamafile (via OpenAI-compatible API)
+  - See [Llamafile JSON API setup](https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart)
+
+### Interactive Features
+- Real-time chat interface with AI models
+- Tool suggestion and execution within conversations
+- Support for both local and cloud-based AI providers
 
 ## Dependencies
 
@@ -34,6 +48,38 @@ mcpx-client can also be executed without being installed using `uvx`:
 uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
 ```
 
+## Configuration
+
+### Provider Setup
+
+#### Claude
+1. Sign up for an Anthropic API account at https://console.anthropic.com
+2. Get your API key from the console
+3. Set the environment variable: `ANTHROPIC_API_KEY=your_key_here`
+
+#### OpenAI
+1. Create an OpenAI account at https://platform.openai.com
+2. Generate an API key in your account settings
+3. Set the environment variable: `OPENAI_API_KEY=your_key_here`
+
+#### Ollama
+1. Install Ollama from https://ollama.ai
+2. Pull your desired model: `ollama pull llama3.2`
+3. No API key needed - runs locally
+
+#### Llamafile
+1. Download a Llamafile model from https://github.com/Mozilla-Ocho/llamafile/releases
+2. Make the file executable: `chmod +x your-model.llamafile`
+3. Run in JSON API mode: `./your-model.llamafile --json-api --host 127.0.0.1 --port 8080`
+4. Use with the OpenAI provider pointing to `http://localhost:8080`
+
+### MCP Platform Setup
+To use MCP tools, you'll need to configure:
+- `XTP_APP_ID`: Your MCP application ID
+- `XTP_TOKEN`: Authentication token
+- `XTP_GUEST_KEY`: Guest access key
+- `XTP_PLUGIN_CACHE_DIR`: Directory for caching plugins (optional)
+
 ## Running
 
 ### Environment variables
@@ -44,7 +90,6 @@ uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
 - `XTP_TOKEN`: XTP auth token
 - `XTP_GUEST_KEY`: XTP guest key
 - `XTP_PLUGIN_CACHE_DIR`: XTP plugin cache dir
-- `MCPX_PATH`: optional, specify an alternative `mcpx` executable
 
 ### Get usage/help 
 
