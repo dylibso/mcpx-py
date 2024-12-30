@@ -130,12 +130,18 @@ class Ollama(ChatProvider):
                 if isinstance(f, str):
                     f = json.loads(f)
                 self.print(">>", f"Calling tool: {call.function.name}")
-                res = await self.config.session.call_tool(
-                    call.function.name, arguments=f
-                )
-                for c in res.content:
-                    if c.type == "text":
-                        await self.chat(c.text, tool=call.function.name)
+                try:
+                    res = await self.config.session.call_tool(
+                        call.function.name, arguments=f
+                    )
+                    for c in res.content:
+                        if c.type == "text":
+                            await self.chat(c.text, tool=call.function.name)
+                except Exception as exc:
+                    s = str(exc)
+                    await self.chat(f"Encountered an error when calling tool \
+                                    {tool.call.function.name}: {s}",
+                                    tool=tool.call.function.name)
 
 
 class OpenAI(ChatProvider):
