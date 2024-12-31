@@ -132,10 +132,7 @@ class Ollama(ChatProvider):
                     f = json.loads(f)
                 self.print(">>", f"Calling tool: {call.function.name}")
                 try:
-                    res = self.config.client.call(
-                        tool=call.function.name, input=f
-                    )
-                    print("XXX", res)
+                    res = self.config.client.call(tool=call.function.name, input=f)
                     for c in res:
                         if c.type == "text":
                             await self.chat(c.text, tool=call.function.name)
