@@ -28,10 +28,12 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 - `uv`
 - `ollama` (optional)
 
-## Installation
+## CLI Usage
+
+### Installation
 
 ```sh
-uv tool install git+https://github.com/dylibso/mcpx-client
+uv tool install git+https://github.com/dylibso/mcpx-py
 ```
 
 Or from the root of the repo:
@@ -40,69 +42,69 @@ Or from the root of the repo:
 uv tool install .
 ```
 
-### uvx
+#### uvx
 
 mcpx-client can also be executed without being installed using `uvx`:
 
 ```sh
-uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
+uvx --from git+https://github.com/dylibso/mcpx-py mcpx-client
 ```
 
-## Configuration
+### Configuration
 
-### Provider Setup
+#### Provider Setup
 
-#### Claude
+##### Claude
 1. Sign up for an Anthropic API account at https://console.anthropic.com
 2. Get your API key from the console
 3. Set the environment variable: `ANTHROPIC_API_KEY=your_key_here`
 
-#### OpenAI
+##### OpenAI
 1. Create an OpenAI account at https://platform.openai.com
 2. Generate an API key in your account settings
 3. Set the environment variable: `OPENAI_API_KEY=your_key_here`
 
-#### Ollama
+##### Ollama
 1. Install Ollama from https://ollama.ai
 2. Pull your desired model: `ollama pull llama3.2`
 3. No API key needed - runs locally
 
-#### Llamafile
+##### Llamafile
 1. Download a Llamafile model from https://github.com/Mozilla-Ocho/llamafile/releases
 2. Make the file executable: `chmod +x your-model.llamafile`
 3. Run in JSON API mode: `./your-model.llamafile --json-api --host 127.0.0.1 --port 8080`
 4. Use with the OpenAI provider pointing to `http://localhost:8080`
 
-### MCP Platform Setup
+#### MCP Platform Setup
 To use MCP tools, you'll need to configure:
 - `MCPX_SESSION_ID`: Your mcp.run session ID
 
-## Running
+### Running
 
-### Environment variables
+#### Environment variables
 
 - `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
 - `OPENAI_API_KEY`: used to configure API key when using the `openai` provider
 
-### Get usage/help 
+#### Get usage/help 
 
 ```sh
 mcpx-client --help
 ```
 
-### Chat with an LLM
+#### Chat with an LLM
 
 ```sh
 mcpx-client chat
 ```
 
-### List tools
+#### List tools
 
 ```sh
 mcpx-client list
 ```
 
-### Call a tool
+#### Call a tool
 
 ```sh
 mcpx-client tool eval-js '{"code": "2+2"}'

@@ -1,7 +1,7 @@
 [project]
-name = "mcpx-client"
+name = "mcpx"
 version = "0.1.0"
-description = "Add your description here"
+description = "An mcp.run client for Python"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
