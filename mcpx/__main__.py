@@ -72,7 +72,11 @@ async def chat_loop(provider):
             return True
         # TODO: maybe avoid fetching tools for each prompt
         provider.get_tools()
-        await provider.chat(msg)
+        async for res in provider.chat(msg):
+            if res.role == "assistant":
+                print(">>", res.content)
+            elif res.role == "tool":
+                print(">>", f"Calling tool {res.tool}")
     except Exception as exc:
         s = str(exc)
         if s != "":
