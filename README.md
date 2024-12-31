@@ -28,20 +28,41 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 - `uv`
 - `ollama` (optional)
 
-## Examples
+## Python Usage
 
-### Hello world using the `eval-js` servlet
+### Installation
+
+Using `uv`:
+
+```bash
+$ uv add git+https://github.com/dylibso/extism-py
+```
+
+Or `pip`:
+
+```bash
+$ pip install git+https://github.com/dylibso/extism-py
+```
+
+### Example code
 
 ```python
-from mcpx import Client
+from mcpx import Client   # Import the mcp.run client
 
-client = Client()
+client = Client()         # Create the client, this will check the
+                          # default location for the mcpx config or
+                          # the `MCPX_SESSION_ID` env var can be used
+                          # to specify a valid mcpx session id
+
+# Call a tool with the given input
 results = client.call("eval-js", {"code": "'Hello, world!'"})
+
+# Iterate over the results
 for content in results:
     print(content.text)
 ```
 
-## CLI Usage
+## Command Line Usage
 
 ### Installation
 
@@ -99,7 +120,7 @@ To use MCP tools, you'll need to configure:
 - `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
 - `OPENAI_API_KEY`: used to configure API key when using the `openai` provider
 
-#### Get usage/help 
+#### Get usage/help
 
 ```sh
 mcpx-client --help
