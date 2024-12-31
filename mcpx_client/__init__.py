@@ -2,11 +2,13 @@ from ollama import Client as OllamaClient
 from ollama import ChatResponse
 from anthropic import AsyncAnthropic
 from openai import OpenAI as OpenAIClient
-from mcp import ClientSession, Tool
 
 import json
 from dataclasses import dataclass
 from typing import Optional
+import tempfile
+
+from .client import Client, Tool
 
 SYSTEM_PROMPT = """
 - when evaluating a javascript function code don't print the result to stdout
@@ -27,7 +29,7 @@ class ChatConfig:
     Stores configuration and session for chats
     """
 
-    session: ClientSession
+    client: Client
     model: str
     url: Optional[str] = None
     system: str = SYSTEM_PROMPT
@@ -52,7 +54,7 @@ class ChatProvider:
 
     def _convert_tool(self, tool: Tool):
         """
-        Convert a tool from mcp.Tool to the expected format
+        Convert a tool from Tool to the expected format
         for the given provider
         """
         return tool
@@ -64,16 +66,16 @@ class ChatProvider:
         """
         pass
 
-    async def get_tools(self):
+    def get_tools(self):
         """
         Get all tools from the mcp server
         """
-        tools = await self.config.session.list_tools()
+        tools = self.config.client.installs
         self.tools = []
-        for name, t in tools:
+        for name, t in tools.items():
             if t is None:
                 continue
-            for tool in t:
+            for tool in t.tools.values():
                 if self.config.debug:
                     self.print("FOUND TOOL:", tool.name)
                 self.tools.append(self._convert_tool(tool))
@@ -91,7 +93,7 @@ class Ollama(ChatProvider):
             "function": {
                 "name": tool.name,
                 "description": tool.description,
-                "parameters": tool.inputSchema,
+                "parameters": tool.input_schema,
             },
         }
 
@@ -131,17 +133,19 @@ class Ollama(ChatProvider):
                     f = json.loads(f)
                 self.print(">>", f"Calling tool: {call.function.name}")
                 try:
-                    res = await self.config.session.call_tool(
-                        call.function.name, arguments=f
+                    res = self.config.client.call(
+                        tool=call.function.name, arguments=input
                     )
-                    for c in res.content:
+                    for c in res:
                         if c.type == "text":
                             await self.chat(c.text, tool=call.function.name)
                 except Exception as exc:
                     s = str(exc)
-                    await self.chat(f"Encountered an error when calling tool \
+                    await self.chat(
+                        f"Encountered an error when calling tool \
                                     {tool.call.function.name}: {s}",
-                                    tool=tool.call.function.name)
+                        tool=tool.call.function.name,
+                    )
 
 
 class OpenAI(ChatProvider):
@@ -155,7 +159,7 @@ class OpenAI(ChatProvider):
             "function": {
                 "name": tool.name,
                 "description": tool.description,
-                "parameters": tool.inputSchema,
+                "parameters": tool.input_schema,
             },
         }
 
@@ -193,10 +197,10 @@ class OpenAI(ChatProvider):
                     if isinstance(f, str):
                         f = json.loads(f)
                     self.print(">>", f"Calling tool: {call.function.name}")
-                    res = await self.config.session.call_tool(
-                        call.function.name, arguments=f
+                    res = self.config.client.call(
+                        tool=call.function.name, input=f
                     )
-                    for c in res.content:
+                    for c in res:
                         if c.type == "text":
                             await self.chat(c.text, tool=call.function.name)
 
@@ -207,11 +211,11 @@ class Claude(ChatProvider):
     """
 
     def _convert_tool(self, tool):
-        if not hasattr(tool, "inputSchema"):
-            return tool
-        tool.input_schema = tool.inputSchema
-        del tool.inputSchema
-        return tool
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": tool.input_schema,
+        }
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         if not hasattr(self, "client"):
@@ -244,9 +248,16 @@ class Claude(ChatProvider):
                 self.print(">>", block.text)
             elif block.type == "tool_use":
                 self.print(">>", f"Calling tool: {block.name}")
-                res = await self.config.session.call_tool(
-                    block.name, arguments=block.input
+                res = self.config.client.call(
+                    tool=block.name, input=block.input
                 )
-                for c in res.content:
+                for c in res:
                     if c.type == "text":
                         await self.chat(c.text, tool=block.name)
+                    elif c.type == "image":
+                        ext = ".jpg"
+                        if c.mime_type == "image/png":
+                            ext = ".png"
+                        with tempfile.NamedTemporaryFile(suffix=ext, delete=False, delete_on_close=False) as tmp:
+                            tmp.write(c._data)
+                            self.print(">>", f"Image saved to {tmp.name}")

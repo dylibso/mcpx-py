@@ -6,11 +6,9 @@ import argparse
 import json
 import psutil
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatProvider, SYSTEM_PROMPT, ChatConfig
+from . import Claude, OpenAI, Ollama, SYSTEM_PROMPT, ChatConfig, Client
 
 CHAT_HELP = """
 Available commands:
@@ -22,40 +20,23 @@ Available commands:
 """
 
 
-async def list_cmd(args, session):
-    tools = await ChatProvider().get_tools(session)
-    for tool in tools:
-        print()
-        print(tool.name)
-        print(tool.description)
-        print("Input schema:")
-        print(json.dumps(tool.inputSchema["properties"], indent=2))
+async def list_cmd(args):
+    client = Client()
+    for install in client.installs.values():
+        for tool in install.tools.values():
+            print()
+            print(tool.name)
+            print(tool.description)
+            print("Input schema:")
+            print(json.dumps(tool.input_schema, indent=2))
 
 
-async def tool_cmd(args, session):
+async def tool_cmd(args):
     try:
-        # Validate JSON input
-        if args.input:
-            try:
-                tool_args = json.loads(args.input)
-            except json.JSONDecodeError:
-                print("ERROR: Invalid JSON input")
-                return
-        else:
-            tool_args = {}
-
-        res = await session.call_tool(args.name, arguments=tool_args)
-        for c in res.content:
-            if c.type == "text":
-                print(c.text)
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-
-
-async def login_cmd(args, session):
-    try:
-        res = await session.call_tool("mcp_run_login", arguments={})
-        for c in res.content:
+        client = Client()
+        print(args.name, args.tool, args.input)
+        res = client.call(tool=args.tool, input=json.loads(args.input))
+        for c in res:
             if c.type == "text":
                 print(c.text)
     except Exception as e:
@@ -76,7 +57,7 @@ async def chat_loop(provider):
                 print("Chat history cleared")
                 return True
             elif msg == "!tools":
-                tools = await provider.get_tools(provider.config.session)
+                tools = provider.get_tools(provider.config.session)
                 print("\nAvailable tools:")
                 for tool in tools:
                     print(f"- {tool.name}")
@@ -90,7 +71,7 @@ async def chat_loop(provider):
         if msg == "":
             return True
         # TODO: maybe avoid fetching tools for each prompt
-        await provider.get_tools()
+        provider.get_tools()
         await provider.chat(msg)
     except Exception as exc:
         s = str(exc)
@@ -101,7 +82,8 @@ async def chat_loop(provider):
     return True
 
 
-async def chat_cmd(args, session):
+async def chat_cmd(args):
+    client = Client()
     if args.model is None:
         if args.provider == "ollama":
             args.model = "llama3.2"
@@ -110,7 +92,7 @@ async def chat_cmd(args, session):
         elif args.provider == "openai":
             args.model = "gpt-4o"
     config = ChatConfig(
-        session=session,
+        client=client,
         model=args.model,
         url=args.url,
         system=args.system,
@@ -156,33 +138,19 @@ async def run(args):
     except Exception as e:
         print(f"Warning: Could not setup command history: {str(e)}")
 
-    env = os.environ.copy()
-    # Disable node errors
-    env["NODE_NO_WARNINGS"] = "1"
-    env["MCP_RUN_ORIGIN"] = args.origin
-    if args.mcpx_debug:
-        env["LOG_LEVEL"] = "debug"
-    else:
-        env["LOG_LEVEL"] = "silent"
+    # env = os.environ.copy()
+    # # Disable node errors
+    # env["NODE_NO_WARNINGS"] = "1"
+    # env["MCP_RUN_ORIGIN"] = args.origin
+    # if args.mcpx_debug:
+    #     env["LOG_LEVEL"] = "debug"
+    # else:
+    #     env["LOG_LEVEL"] = "silent"
 
     # Create server parameters for stdio connection
     if args.debug:
-        print(env)
-
-    server_params = StdioServerParameters(
-        command="npx",
-        args=["--yes", "@dylibso/mcpx"],
-        env=env,
-    )
-
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            # Initialize the connection
-            await session.initialize()
-            await args.func(args, session)
-            session._read_stream.close()
-            session._write_stream.close()
-            killtree(os.getpid())
+        print(os.environ)
+    await args.func(args)
 
 
 def main():
@@ -190,9 +158,6 @@ def main():
 
     args = argparse.ArgumentParser(prog="mcpx-client")
     args.add_argument("--debug", action="store_true", help="Enable debug logging")
-    args.add_argument(
-        "--mcpx-debug", action="store_true", help="Enable debug logging for mcpx"
-    )
     args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
@@ -200,15 +165,12 @@ def main():
     list_parser = sub.add_parser("list")
     list_parser.set_defaults(func=list_cmd)
 
-    # Login parser
-    login_parser = sub.add_parser("login")
-    login_parser.set_defaults(func=login_cmd)
-
     # Tool subcommand
     tool_parser = sub.add_parser("tool")
     tool_parser.set_defaults(func=tool_cmd)
-    tool_parser.add_argument("name", help="Tool name")
-    tool_parser.add_argument("input", help="Tool input", nargs="?", default="")
+    tool_parser.add_argument("name", help="Install name name")
+    tool_parser.add_argument("--tool", help="Tool name", default=None)
+    tool_parser.add_argument("input", help="Tool input", nargs="?", default="{}")
 
     # Chat subcommand
     chat_parser = sub.add_parser("chat")
