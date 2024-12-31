@@ -2,13 +2,12 @@ from ollama import Client as OllamaClient
 from ollama import ChatResponse
 from anthropic import AsyncAnthropic
 from openai import OpenAI as OpenAIClient
+from mcpx import Client, Tool
 
 import json
 from dataclasses import dataclass
 from typing import Optional
 import tempfile
-
-from .client import Client, Tool
 
 SYSTEM_PROMPT = """
 - when evaluating a javascript function code don't print the result to stdout
