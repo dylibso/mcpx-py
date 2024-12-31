@@ -9,5 +9,5 @@ __all__ = [
     "ChatProvider",
     "Ollama",
     "OpenAI",
-    "Claude"
+    "Claude",
 ]

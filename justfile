@@ -3,3 +3,6 @@ test:
 
 format:
     uv run ruff format mcpx
+
+check:
+    uv run ruff check mcpx

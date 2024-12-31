@@ -155,7 +155,9 @@ class Client:
     plugin_cache: Cache[str, InstalledPlugin]
 
     def __init__(
-        self, session_id: str = _default_session_id(), config: ClientConfig | None = None
+        self,
+        session_id: str = _default_session_id(),
+        config: ClientConfig | None = None,
     ):
         if config is None:
             config = ClientConfig()
