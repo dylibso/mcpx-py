@@ -8,7 +8,8 @@ import psutil
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, SYSTEM_PROMPT, ChatConfig, Client
+from . import Claude, OpenAI, Ollama, ChatConfig, Client
+from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """
 Available commands:
