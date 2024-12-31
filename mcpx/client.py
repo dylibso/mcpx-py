@@ -96,19 +96,31 @@ def _parse_mcpx_config(filename: str | Path) -> str | None:
 
 
 def _default_session_id() -> str:
+    # Allow session id to be specified using MCPX_SESSION_ID
     id = os.environ.get("MCPX_SESSION_ID")
     if id is not None:
         return id
 
-    user = Path(os.path.expanduser("~"))
-    dot_config = user / ".config" / "mcpx" / "config.json"
-
+    # Allow config file to be specified using MCPX_CONFIG
     path = os.environ.get("MCPX_CONFIG")
     if path is not None:
         return _parse_mcpx_config(path)
 
+    # Try ~/.config/mcpx/config.json for Linux/macOS
+    user = Path(os.path.expanduser("~"))
+    dot_config = user / ".config" / "mcpx" / "config.json"
     if dot_config.exists():
         return _parse_mcpx_config(dot_config)
+
+    # Try Windows paths
+    windows_config = os.path.expandvars("%LOCALAPPDATA%/mcpx/config.json")
+    if windows_config.exists():
+        return _parse_mcpx_config(windows_config)
+
+    windows_config = os.path.expandvars("%APPDATA%/mcpx/config.json")
+    if windows_config.exists():
+        return _parse_mcpx_config(windows_config)
+
     raise Exception("No mcpx session ID found")
 
 
