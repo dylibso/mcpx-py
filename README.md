@@ -28,6 +28,8 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 - `uv`
 - `ollama` (optional)
 
+## Examples
+
 ## CLI Usage
 
 ### Installation
