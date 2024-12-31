@@ -21,8 +21,5 @@ dev-dependencies = [
     "ruff>=0.8.1",
 ]
 
-[tool.uv.sources]
-mcpx = { git = "https://github.com/dylibso/mcpx-py" }
-
 [project.scripts]
 mcpx-client = "mcpx_client.__main__:main"

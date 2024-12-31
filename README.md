@@ -1,6 +1,6 @@
 # mcpx-client
 
-A command line client for working with `mcpx` and https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools through the MCP platform.
+A command line client for https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools.
 
 ## Features
 
