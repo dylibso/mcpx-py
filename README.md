@@ -62,6 +62,8 @@ for content in results:
     print(content.text)
 ```
 
+More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py/tree/main/examples) directory
+
 ## Command Line Usage
 
 ### Installation
