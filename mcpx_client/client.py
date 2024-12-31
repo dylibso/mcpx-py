@@ -62,19 +62,25 @@ class InstalledPlugin:
     def call(self, tool: str | None = None, input: dict = {}):
         if tool is None:
             tool = self._install.name
+        print("XXX", input)
         j = json.dumps({"params": {"arguments": input, "name": tool}})
         r = self._plugin.call("call", j)
+        print("XXX", r)
         r = json.loads(r)
 
         out = []
         for c in r["content"]:
-            print(c)
             ty = c["type"]
             if ty == "text":
                 out.append(Content(type=ty, _data=c["text"]))
             elif ty == "image":
-                out.append(Content(type=ty, _data=base64.b64decode(c["data"]),
-                                   mime_type=c["mimeType"]))
+                out.append(
+                    Content(
+                        type=ty,
+                        _data=base64.b64decode(c["data"]),
+                        mime_type=c["mimeType"],
+                    )
+                )
         return out
 
 

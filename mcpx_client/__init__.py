@@ -134,17 +134,27 @@ class Ollama(ChatProvider):
                 self.print(">>", f"Calling tool: {call.function.name}")
                 try:
                     res = self.config.client.call(
-                        tool=call.function.name, arguments=input
+                        tool=call.function.name, input=f
                     )
+                    print("XXX", res)
                     for c in res:
                         if c.type == "text":
                             await self.chat(c.text, tool=call.function.name)
+                        elif c.type == "image":
+                            ext = ".jpg"
+                            if c.mime_type == "image/png":
+                                ext = ".png"
+                            with tempfile.NamedTemporaryFile(
+                                suffix=ext, delete=False, delete_on_close=False
+                            ) as tmp:
+                                tmp.write(c._data)
+                                self.print(">>", f"Image saved to {tmp.name}")
                 except Exception as exc:
                     s = str(exc)
                     await self.chat(
                         f"Encountered an error when calling tool \
-                                    {tool.call.function.name}: {s}",
-                        tool=tool.call.function.name,
+                                    {call.function.name}: {s}",
+                        tool=call.function.name,
                     )
 
 
@@ -197,12 +207,27 @@ class OpenAI(ChatProvider):
                     if isinstance(f, str):
                         f = json.loads(f)
                     self.print(">>", f"Calling tool: {call.function.name}")
-                    res = self.config.client.call(
-                        tool=call.function.name, input=f
-                    )
-                    for c in res:
-                        if c.type == "text":
-                            await self.chat(c.text, tool=call.function.name)
+                    try:
+                        res = self.config.client.call(tool=call.function.name, input=f)
+                        for c in res:
+                            if c.type == "text":
+                                await self.chat(c.text, tool=call.function.name)
+                            elif c.type == "image":
+                                ext = ".jpg"
+                                if c.mime_type == "image/png":
+                                    ext = ".png"
+                                with tempfile.NamedTemporaryFile(
+                                    suffix=ext, delete=False, delete_on_close=False
+                                ) as tmp:
+                                    tmp.write(c._data)
+                                    self.print(">>", f"Image saved to {tmp.name}")
+                    except Exception as exc:
+                        s = str(exc)
+                        await self.chat(
+                            f"Encountered an error when calling tool \
+                                        {call.function.name}: {s}",
+                            tool=call.function.name,
+                        )
 
 
 class Claude(ChatProvider):
@@ -248,16 +273,24 @@ class Claude(ChatProvider):
                 self.print(">>", block.text)
             elif block.type == "tool_use":
                 self.print(">>", f"Calling tool: {block.name}")
-                res = self.config.client.call(
-                    tool=block.name, input=block.input
-                )
-                for c in res:
-                    if c.type == "text":
-                        await self.chat(c.text, tool=block.name)
-                    elif c.type == "image":
-                        ext = ".jpg"
-                        if c.mime_type == "image/png":
-                            ext = ".png"
-                        with tempfile.NamedTemporaryFile(suffix=ext, delete=False, delete_on_close=False) as tmp:
-                            tmp.write(c._data)
-                            self.print(">>", f"Image saved to {tmp.name}")
+                try:
+                    res = self.config.client.call(tool=block.name, input=block.input)
+                    for c in res:
+                        if c.type == "text":
+                            await self.chat(c.text, tool=block.name)
+                        elif c.type == "image":
+                            ext = ".jpg"
+                            if c.mime_type == "image/png":
+                                ext = ".png"
+                            with tempfile.NamedTemporaryFile(
+                                suffix=ext, delete=False, delete_on_close=False
+                            ) as tmp:
+                                tmp.write(c._data)
+                                self.print(">>", f"Image saved to {tmp.name}")
+                except Exception as exc:
+                    s = str(exc)
+                    await self.chat(
+                        f"Encountered an error when calling tool \
+                                    {block.name}: {s}",
+                        tool=block.name,
+                    )
