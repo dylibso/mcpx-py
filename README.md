@@ -75,10 +75,7 @@ uvx --from git+https://github.com/dylibso/mcpx-client mcpx-client
 
 ### MCP Platform Setup
 To use MCP tools, you'll need to configure:
-- `XTP_APP_ID`: Your MCP application ID
-- `XTP_TOKEN`: Authentication token
-- `XTP_GUEST_KEY`: Guest access key
-- `XTP_PLUGIN_CACHE_DIR`: Directory for caching plugins (optional)
+- `MCPX_SESSION_ID`: Your mcp.run session ID
 
 ## Running
 
@@ -86,10 +83,6 @@ To use MCP tools, you'll need to configure:
 
 - `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
 - `OPENAI_API_KEY`: used to configure API key when using the `openai` provider
-- `XTP_APP_ID`: XTP app ID
-- `XTP_TOKEN`: XTP auth token
-- `XTP_GUEST_KEY`: XTP guest key
-- `XTP_PLUGIN_CACHE_DIR`: XTP plugin cache dir
 
 ### Get usage/help 
 
@@ -112,5 +105,5 @@ mcpx-client list
 ### Call a tool
 
 ```sh
-mcpx-client tool eval_js '{"code": "2+2"}'
+mcpx-client tool eval-js '{"code": "2+2"}'
 ```
