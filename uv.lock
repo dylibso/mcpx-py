@@ -274,7 +274,7 @@ wheels = [
 [[package]]
 name = "mcpx"
 version = "0.1.0"
-source = { git = "https://github.com/dylibso/mcpx-py#cbfab67ba4a7534099ebbff3dfa97ff8d57a0fda" }
+source = { git = "https://github.com/dylibso/mcpx-py#79f154d1a2877ace30aeeb066487afb2a9f420f3" }
 dependencies = [
     { name = "extism" },
     { name = "requests" },

@@ -34,8 +34,7 @@ async def list_cmd(args):
 async def tool_cmd(args):
     try:
         client = Client()
-        print(args.name, args.tool, args.input)
-        res = client.call(tool=args.tool, input=json.loads(args.input))
+        res = client.call(tool=args.name, input=json.loads(args.input))
         for c in res:
             if c.type == "text":
                 print(c.text)
@@ -169,7 +168,6 @@ def main():
     tool_parser = sub.add_parser("tool")
     tool_parser.set_defaults(func=tool_cmd)
     tool_parser.add_argument("name", help="Install name name")
-    tool_parser.add_argument("--tool", help="Tool name", default=None)
     tool_parser.add_argument("input", help="Tool input", nargs="?", default="{}")
 
     # Chat subcommand

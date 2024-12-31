@@ -18,6 +18,8 @@ SYSTEM_PROMPT = """
   tool calls with the user
 - Invoke the tools upon requests you cannot fulfill on your own
   and parse the responses
+- Do not invoke the same tool multiple times in a row with the same
+  arguments
 - Always try to provide a well formatted, itemized summary
 """
 
