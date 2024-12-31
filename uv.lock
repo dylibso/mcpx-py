@@ -274,19 +274,10 @@ wheels = [
 [[package]]
 name = "mcpx"
 version = "0.1.0"
-source = { git = "https://github.com/dylibso/mcpx-py#a0123d61a526c0f4c0ed7e9df34b250b9e8f58aa" }
-dependencies = [
-    { name = "extism" },
-    { name = "requests" },
-]
-
-[[package]]
-name = "mcpx-client"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
-    { name = "mcpx" },
+    { name = "extism" },
     { name = "ollama" },
     { name = "openai" },
     { name = "psutil" },
@@ -303,7 +294,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
-    { name = "mcpx", git = "https://github.com/dylibso/mcpx-py" },
+    { name = "extism", specifier = ">=1.0.3" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "psutil", specifier = ">=6.1.1" },
