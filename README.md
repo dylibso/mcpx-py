@@ -30,6 +30,17 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 
 ## Examples
 
+### Hello world using the `eval-js` servlet
+
+```python
+from mcpx import Client
+
+client = Client()
+results = client.call("eval-js", {"code": "'Hello, world!'"})
+for content in results:
+    print(content.text)
+```
+
 ## CLI Usage
 
 ### Installation
