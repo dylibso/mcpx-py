@@ -6,7 +6,7 @@ from mcpx import Chat, Claude
 # async function
 async def main():
     # Connect to the Claude API, this also creates an mcp.run client
-    llm = Chat(Claude, max_tokens=2048)
+    llm = Chat(Claude)
 
     # Or OpenAI
     # from mcpx import OpenAI
@@ -16,8 +16,14 @@ async def main():
     # from mcpx import Ollama
     # llm = Chat(Ollama)
 
+    # Or Gemini
+    # from mcpx import Gemini
+    # llm = Chat(Gemini)
+
     # Prompt claude and iterate over the results
-    async for message in llm.chat("what is the area of a three foot cube"):
+    async for message in llm.chat(
+        "what is the total surface area of ten three foot cubes"
+    ):
         print(message)
 
 

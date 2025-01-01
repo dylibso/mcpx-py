@@ -14,8 +14,8 @@ from .client import Client, Tool
 
 SYSTEM_PROMPT = """
 - Do not come up with directions or indications.
-- Always use the provided tools/functions when applicable, and share the results of
-  tool calls with the user
+- Always use the provided tools/functions when applicable, and share the
+  results of tool calls with the user
 - Invoke the tools upon requests you cannot fulfill on your own
   and parse the responses
 - Always try to provide a well formatted, itemized summary
@@ -210,14 +210,14 @@ class Ollama(ChatProvider):
         if self.config.debug:
             self.print(response)
         content = response.message.content
+        if content is not None and content != "":
+            self.append_message(content, role="assistant")
+            yield ChatResponse(role="assistant", content=content)
         if response.message.tool_calls is not None:
             for call in response.message.tool_calls:
                 f = call.function.arguments
                 async for res in handle_tool_call(call.function.name, f, self):
                     yield res
-        if content is not None and content != "":
-            self.append_message(content, role="assistant")
-            yield ChatResponse(role="assistant", content=content)
 
 
 class OpenAI(ChatProvider):
@@ -257,6 +257,9 @@ class OpenAI(ChatProvider):
             if self.config.debug:
                 self.print(response)
             content = response.message.content
+            if content is not None and content != "":
+                self.append_message(content, role="assistant")
+                yield ChatResponse(role="assistant", content=content)
             if (
                 response.message.tool_calls is not None
                 and response.finish_reason == "tool_calls"
@@ -265,9 +268,6 @@ class OpenAI(ChatProvider):
                     f = call.function.arguments
                     async for res in handle_tool_call(call.function.name, f, self):
                         yield res
-            if content is not None and content != "":
-                self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content)
 
 
 class Gemini(OpenAI):
@@ -293,7 +293,13 @@ class Gemini(OpenAI):
         for response in r.choices:
             if self.config.debug:
                 self.print(response)
+            if response.message is None:
+                continue
             content = response.message.content
+            if content is not None and content != "":
+                self.append_message(content, role="assistant")
+                yield ChatResponse(role="assistant", content=content)
+
             if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
                     f = call.function.arguments
@@ -303,15 +309,16 @@ class Gemini(OpenAI):
             # TODO: remove this, checking `toolCalls` is only required for now because of a bug
             # in the Gemini OpenAI compatiblitiy
             # see https://discuss.ai.google.dev/t/two-tool-calling-bugs-i-found-in-openai-compatibility-beta/58174
-            if hasattr(response.message, 'toolCalls') and response.message.toolCalls is not None:
+            if (
+                hasattr(response.message, "toolCalls")
+                and response.message.toolCalls is not None
+            ):
                 for call in response.message.toolCalls:
-                    f = call['function']['arguments']
-                    async for res in handle_tool_call(call['function']['name'], f, self):
+                    f = call["function"]["arguments"]
+                    async for res in handle_tool_call(
+                        call["function"]["name"], f, self
+                    ):
                         yield res
-
-            if content is not None and content != "":
-                self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content)
 
 
 class Claude(ChatProvider):
