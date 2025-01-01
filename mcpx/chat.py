@@ -365,14 +365,17 @@ class Chat:
     provider: ChatProvider
 
     def __init__(self, provider=Claude, *args, **kw):
-        config = None
-        if len(args) > 0 and isinstance(args[0], ChatConfig):
-            config = args[0]
-        elif "config" in kw:
-            config = kw["config"]
+        if isinstance(provider, ChatProvider):
+            self.provider = provider
         else:
-            config = ChatConfig(*args, **kw)
-        self.provider = provider(config=config)
+            config = None
+            if len(args) > 0 and isinstance(args[0], ChatConfig):
+                config = args[0]
+            elif "config" in kw:
+                config = kw["config"]
+            else:
+                config = ChatConfig(*args, **kw)
+            self.provider = provider(config=config)
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         self.provider.get_tools()
