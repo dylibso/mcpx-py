@@ -5,7 +5,7 @@ from openai import OpenAI as OpenAIClient
 import traceback
 import json
 from dataclasses import dataclass
-from typing import Optional, List, Iterator
+from typing import Optional, List, Iterator, Callable
 import tempfile
 import os
 
@@ -364,14 +364,16 @@ class Claude(ChatProvider):
 class Chat:
     provider: ChatProvider
 
-    def __init__(self, provider=Claude, *args, **kw):
+    def __init__(
+        self, provider: Callable[..., ChatProvider] | ChatProvider = Claude, *args, **kw
+    ):
         if isinstance(provider, ChatProvider):
             self.provider = provider
         else:
             config = None
             if len(args) > 0 and isinstance(args[0], ChatConfig):
                 config = args[0]
-            elif "config" in kw:
+            elif "config" in kw and isinstance(args[0], ChatConfig):
                 config = kw["config"]
             else:
                 config = ChatConfig(*args, **kw)
