@@ -18,6 +18,8 @@ SYSTEM_PROMPT = """
 - Invoke the tools upon requests you cannot fulfill on your own
   and parse the responses
 - Always try to provide a well formatted, itemized summary
+- If the user provides the result of a tool and no other action is needed just 
+  repeat it back to them
 """
 
 
@@ -29,7 +31,7 @@ class ChatConfig:
 
     client: Client = Client()
     model: str | None = None
-    max_tokens: int = 4096
+    max_tokens: int = 1024
     url: Optional[str] = None
     system: str = SYSTEM_PROMPT
     format: Optional[str] = None
@@ -241,7 +243,8 @@ class OpenAI(ChatProvider):
             self.append_message(self.config.system, role="system")
         self.append_message(msg, tool=tool)
         r = self.provider_client.chat.completions.create(
-            messages=self.messages, model=self.config.model, tools=self.tools
+            messages=self.messages, model=self.config.model, tools=self.tools, 
+            max_tokens=self.config.max_tokens
         )
         for response in r.choices:
             if self.config.debug:
@@ -283,6 +286,7 @@ class Claude(ChatProvider):
             model=self.config.model,
             tools=self.tools,
             system=self.config.system,
+
         )
         for block in res.content:
             if block.type == "tool_use":

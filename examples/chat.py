@@ -6,7 +6,7 @@ from mcpx import Chat, Claude
 # async function
 async def main():
     # Connect to the Claude API, this also creates an mcp.run client
-    llm = Chat(Claude)
+    llm = Chat(Claude, max_tokens=2048)
 
     # Or OpenAI
     # from mcpx import OpenAI
