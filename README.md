@@ -24,8 +24,6 @@ A Python library and command line client for https://www.mcp.run. This tool enab
 
 ## Dependencies
 
-- `npx`
-- `mcpx` should be in your `$PATH`
 - `uv`
 - `ollama` (optional)
 
@@ -65,6 +63,40 @@ for content in results:
 
 More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py/tree/main/examples) directory
 
+### Configuration
+
+#### Provider Setup
+
+##### Claude
+1. Sign up for an Anthropic API account at https://console.anthropic.com
+2. Get your API key from the console
+3. Set the environment variable: `ANTHROPIC_API_KEY=your_key_here`
+
+##### OpenAI
+1. Create an OpenAI account at https://platform.openai.com
+2. Generate an API key in your account settings
+3. Set the environment variable: `OPENAI_API_KEY=your_key_here`
+
+##### Gemini
+1. Create an Gemini account at https://aistudio.google.com
+2. Generate an API key in your account settings
+3. Set the environment variable: `GEMINI_API_KEY=your_key_here`
+
+##### Ollama
+1. Install Ollama from https://ollama.ai
+2. Pull your desired model: `ollama pull llama3.2`
+3. No API key needed - runs locally
+
+##### Llamafile
+1. Download a Llamafile model from https://github.com/Mozilla-Ocho/llamafile/releases
+2. Make the file executable: `chmod +x your-model.llamafile`
+3. Run in JSON API mode: `./your-model.llamafile --json-api --host 127.0.0.1 --port 8080`
+4. Use with the OpenAI provider pointing to `http://localhost:8080`
+
+#### mcp.run Setup
+
+- `MCPX_SESSION_ID`: Your mcp.run session ID
+
 ## Command Line Usage
 
 ### Installation
@@ -87,46 +119,7 @@ mcpx-client can also be executed without being installed using `uvx`:
 uvx --from git+https://github.com/dylibso/mcpx-py mcpx-client
 ```
 
-### Configuration
-
-#### Provider Setup
-
-##### Claude
-1. Sign up for an Anthropic API account at https://console.anthropic.com
-2. Get your API key from the console
-3. Set the environment variable: `ANTHROPIC_API_KEY=your_key_here`
-
-##### OpenAI
-1. Create an OpenAI account at https://platform.openai.com
-2. Generate an API key in your account settings
-3. Set the environment variable: `OPENAI_API_KEY=your_key_here`
-
-##### OpenAI
-1. Create an OpenAI account at https://aistudio.google.com 
-2. Generate an API key in your account settings
-3. Set the environment variable: `GEMINI_API_KEY=your_key_here`
-
-##### Ollama
-1. Install Ollama from https://ollama.ai
-2. Pull your desired model: `ollama pull llama3.2`
-3. No API key needed - runs locally
-
-##### Llamafile
-1. Download a Llamafile model from https://github.com/Mozilla-Ocho/llamafile/releases
-2. Make the file executable: `chmod +x your-model.llamafile`
-3. Run in JSON API mode: `./your-model.llamafile --json-api --host 127.0.0.1 --port 8080`
-4. Use with the OpenAI provider pointing to `http://localhost:8080`
-
-#### MCP Platform Setup
-To use MCP tools, you'll need to configure:
-- `MCPX_SESSION_ID`: Your mcp.run session ID
-
 ### Running
-
-#### Environment variables
-
-- `ANTHROPIC_API_KEY`: used to configure API key when using the `claude` provider
-- `OPENAI_API_KEY`: used to configure API key when using the `openai` provider
 
 #### Get usage/help
 
