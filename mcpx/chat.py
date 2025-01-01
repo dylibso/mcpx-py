@@ -18,8 +18,11 @@ SYSTEM_PROMPT = """
 - Invoke the tools upon requests you cannot fulfill on your own
   and parse the responses
 - Always try to provide a well formatted, itemized summary
-- If the user provides the result of a tool and no other action is needed just 
+- If the user provides the result of a tool and no other action is needed just
   repeat it back to them
+- Only perform verification of a computation at most once if absolutely needed,
+  if a computation is performed using a tool then the results do not need to be
+  re-verified
 """
 
 
@@ -250,7 +253,7 @@ class OpenAI(ChatProvider):
             if self.config.debug:
                 self.print(response)
             content = response.message.content
-            if response.message.tool_calls is not None:
+            if response.message.tool_calls is not None and response.finish_reason == "tool_calls":
                 for call in response.message.tool_calls:
                     f = call.function.arguments
                     async for res in handle_tool_call(call.function.name, f, self):
@@ -289,13 +292,12 @@ class Claude(ChatProvider):
 
         )
         for block in res.content:
-            if block.type == "tool_use":
-                async for res in handle_tool_call(block.name, block.input, self):
-                    yield res
-        for block in res.content:
             if self.config.debug:
                 self.print(block)
-            if block.type == "text":
+            if block.type == "tool_use" and res.stop_reason == "tool_use":
+                async for res in handle_tool_call(block.name, block.input, self):
+                    yield res
+            elif block.type == "text":
                 self.append_message(block.text, role="assistant")
                 yield ChatResponse(role="assistant", content=block.text)
 
