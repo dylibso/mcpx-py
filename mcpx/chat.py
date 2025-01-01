@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass
 from typing import Optional, List, Iterator
 import tempfile
+import os
 
 from .client import Client, Tool
 
@@ -33,9 +34,10 @@ class ChatConfig:
     """
 
     client: Client = Client()
+    api_key: str | None = None
     model: str | None = None
     max_tokens: int = 1024
-    url: Optional[str] = None
+    base_url: Optional[str] = None
     system: str = SYSTEM_PROMPT
     format: Optional[str] = None
     provider_client: object | None = None
@@ -103,9 +105,7 @@ class ChatProvider:
         self.messages.append(
             {
                 "role": role,
-                "content": msg
-                if tool is None
-                else f"{tool} output: {msg}",
+                "content": msg if tool is None else f"{tool} output: {msg}",
             }
         )
 
@@ -196,7 +196,7 @@ class Ollama(ChatProvider):
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         if not hasattr(self, "provider_client"):
-            self.provider_client = OllamaClient(host=self.config.url)
+            self.provider_client = OllamaClient(host=self.config.base_url)
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
         self.append_message(msg, role="user" if tool is None else "tool", tool=tool)
@@ -241,23 +241,74 @@ class OpenAI(ChatProvider):
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         if not hasattr(self, "provider_client"):
-            self.provider_client = OpenAIClient(base_url=self.config.url)
+            self.provider_client = OpenAIClient(
+                base_url=self.config.base_url, api_key=self.config.api_key
+            )
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
         self.append_message(msg, tool=tool)
         r = self.provider_client.chat.completions.create(
-            messages=self.messages, model=self.config.model, tools=self.tools, 
-            max_tokens=self.config.max_tokens
+            messages=self.messages,
+            model=self.config.model,
+            tools=self.tools,
+            max_tokens=self.config.max_tokens,
         )
         for response in r.choices:
             if self.config.debug:
                 self.print(response)
             content = response.message.content
-            if response.message.tool_calls is not None and response.finish_reason == "tool_calls":
+            if (
+                response.message.tool_calls is not None
+                and response.finish_reason == "tool_calls"
+            ):
                 for call in response.message.tool_calls:
                     f = call.function.arguments
                     async for res in handle_tool_call(call.function.name, f, self):
                         yield res
+            if content is not None and content != "":
+                self.append_message(content, role="assistant")
+                yield ChatResponse(role="assistant", content=content)
+
+
+class Gemini(OpenAI):
+    @staticmethod
+    def _default_model() -> str:
+        return "gemini-1.5-flash"
+
+    async def chat(self, msg: str, tool: Optional[str] = None):
+        if not hasattr(self, "provider_client"):
+            self.provider_client = OpenAIClient(
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key=os.environ.get("GEMINI_API_KEY", self.config.api_key),
+            )
+        if len(self.messages) == 0:
+            self.append_message(self.config.system, role="system")
+        self.append_message(msg, tool=tool)
+        r = self.provider_client.chat.completions.create(
+            messages=self.messages,
+            model=self.config.model,
+            tools=self.tools,
+            max_tokens=self.config.max_tokens,
+        )
+        for response in r.choices:
+            if self.config.debug:
+                self.print(response)
+            content = response.message.content
+            if response.message.tool_calls is not None:
+                for call in response.message.tool_calls:
+                    f = call.function.arguments
+                    async for res in handle_tool_call(call.function.name, f, self):
+                        yield res
+
+            # TODO: remove this, checking `toolCalls` is only required for now because of a bug
+            # in the Gemini OpenAI compatiblitiy
+            # see https://discuss.ai.google.dev/t/two-tool-calling-bugs-i-found-in-openai-compatibility-beta/58174
+            if hasattr(response.message, 'toolCalls') and response.message.toolCalls is not None:
+                for call in response.message.toolCalls:
+                    f = call['function']['arguments']
+                    async for res in handle_tool_call(call['function']['name'], f, self):
+                        yield res
+
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
                 yield ChatResponse(role="assistant", content=content)
@@ -281,7 +332,9 @@ class Claude(ChatProvider):
 
     async def chat(self, msg: str, tool: Optional[str] = None):
         if not hasattr(self, "provider_client"):
-            self.provider_client = AsyncAnthropic(base_url=self.config.url)
+            self.provider_client = AsyncAnthropic(
+                base_url=self.config.base_url, api_key=self.config.api_key
+            )
         self.append_message(msg, tool=tool)
         res = await self.provider_client.messages.create(
             max_tokens=self.config.max_tokens,
@@ -289,7 +342,6 @@ class Claude(ChatProvider):
             model=self.config.model,
             tools=self.tools,
             system=self.config.system,
-
         )
         for block in res.content:
             if self.config.debug:

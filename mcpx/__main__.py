@@ -9,7 +9,7 @@ import traceback
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Client
+from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini
 from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """
@@ -99,7 +99,7 @@ async def chat_cmd(args):
     config = ChatConfig(
         client=client,
         model=args.model,
-        url=args.url,
+        base_url=args.url,
         system=args.system,
         format=args.format,
         debug=args.debug,
@@ -111,6 +111,8 @@ async def chat_cmd(args):
         provider = Claude(config)
     elif args.provider == "openai":
         provider = OpenAI(config)
+    elif args.provider == "gemini":
+        provider = Gemini(config)
     while True:
         ok = await chat_loop(provider)
         if not ok:
@@ -143,16 +145,6 @@ async def run(args):
     except Exception as e:
         print(f"Warning: Could not setup command history: {str(e)}")
 
-    # env = os.environ.copy()
-    # # Disable node errors
-    # env["NODE_NO_WARNINGS"] = "1"
-    # env["MCP_RUN_ORIGIN"] = args.origin
-    # if args.mcpx_debug:
-    #     env["LOG_LEVEL"] = "debug"
-    # else:
-    #     env["LOG_LEVEL"] = "silent"
-
-    # Create server parameters for stdio connection
     if args.debug:
         print(os.environ)
     await args.func(args)
@@ -182,7 +174,7 @@ def main():
     chat_parser.add_argument(
         "--provider",
         "-p",
-        choices=["ollama", "claude", "openai"],
+        choices=["ollama", "claude", "openai", "gemini"],
         default="claude",
         help="LLM provider",
     )

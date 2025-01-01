@@ -10,9 +10,10 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 - **Tool Integration**: Use tools seamlessly within AI chat conversations
 
 ### AI Provider Support
-- **Claude**: Anthropic's Claude models via API
+- **Claude**: Anthropic's Claude models
 - **Ollama**: Local open-source LLMs
 - **ChatGPT**: OpenAI's GPT models
+- **Gemini**: Google's models
 - **Llamafile**: Local AI using Mozilla's Llamafile (via OpenAI-compatible API)
   - See [Llamafile JSON API setup](https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart)
 
@@ -99,6 +100,11 @@ uvx --from git+https://github.com/dylibso/mcpx-py mcpx-client
 1. Create an OpenAI account at https://platform.openai.com
 2. Generate an API key in your account settings
 3. Set the environment variable: `OPENAI_API_KEY=your_key_here`
+
+##### OpenAI
+1. Create an OpenAI account at https://aistudio.google.com 
+2. Generate an API key in your account settings
+3. Set the environment variable: `GEMINI_API_KEY=your_key_here`
 
 ##### Ollama
 1. Install Ollama from https://ollama.ai

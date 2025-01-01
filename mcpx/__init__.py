@@ -1,4 +1,4 @@
-from .chat import ChatProvider, ChatConfig, Chat, Ollama, OpenAI, Claude
+from .chat import ChatProvider, ChatConfig, Chat, Ollama, OpenAI, Claude, Gemini
 from .client import Client, ClientConfig, Tool
 
 __all__ = [
@@ -11,4 +11,5 @@ __all__ = [
     "Ollama",
     "OpenAI",
     "Claude",
+    "Gemini",
 ]
