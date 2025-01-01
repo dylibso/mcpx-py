@@ -1,6 +1,6 @@
-# mcpx-client
+# mcpx-py
 
-A command line client for https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools.
+A Python library and command line client for https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools.
 
 ## Features
 
@@ -10,11 +10,11 @@ A command line client for https://www.mcp.run. This tool enables seamless intera
 - **Tool Integration**: Use tools seamlessly within AI chat conversations
 
 ### AI Provider Support
-- **Claude**: Anthropic's Claude models
-- **Ollama**: Local open-source LLMs
-- **ChatGPT**: OpenAI's GPT models
-- **Gemini**: Google's models
-- **Llamafile**: Local AI using Mozilla's Llamafile (via OpenAI-compatible API)
+- **Ollama**: https://ollama.com/
+- **Claude**: https://www.anthropic.com/api
+- **OpenAI**: https://openai.com/api/
+- **Gemini**: https://ai.google.dev/
+- **Llamafile**: https://github.com/Mozilla-Ocho/llamafile
   - See [Llamafile JSON API setup](https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart)
 
 ### Interactive Features
