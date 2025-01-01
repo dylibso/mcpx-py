@@ -5,6 +5,7 @@ import atexit
 import argparse
 import json
 import psutil
+import traceback
 
 from dotenv import load_dotenv
 
@@ -75,26 +76,13 @@ async def chat_loop(provider):
         async for res in provider.chat(msg):
             if res.role == "assistant":
                 print(">>", res.content)
-            elif res.role == "tool":
-                print(">>", f"Calling tool {res.tool}")
-    except Exception as exc:
-        s = str(exc)
-        if s != "":
-            print("\nERROR>>", exc)
-        else:
-            print()
+    except Exception:
+        print("\nERROR>>", traceback.format_exc())
     return True
 
 
 async def chat_cmd(args):
     client = Client()
-    if args.model is None:
-        if args.provider == "ollama":
-            args.model = "llama3.2"
-        elif args.provider == "claude":
-            args.model = "claude-3-5-sonnet-20241022"
-        elif args.provider == "openai":
-            args.model = "gpt-4o"
     config = ChatConfig(
         client=client,
         model=args.model,

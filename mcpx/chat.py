@@ -2,6 +2,7 @@ from ollama import ChatResponse as OllamaChatResponse, Client as OllamaClient
 from anthropic import AsyncAnthropic
 from openai import OpenAI as OpenAIClient
 
+import traceback
 import json
 from dataclasses import dataclass
 from typing import Optional, List, Iterator
@@ -9,17 +10,13 @@ import tempfile
 
 from .client import Client, Tool
 
+
 SYSTEM_PROMPT = """
-- when evaluating a javascript function code don't print the result to stdout
-  instead just call the generated javascript function on its own since the code
-  will be executed using eval
 - Do not come up with directions or indications.
-- Always use the provided functions when applicable, and share the results of
+- Always use the provided tools/functions when applicable, and share the results of
   tool calls with the user
 - Invoke the tools upon requests you cannot fulfill on your own
   and parse the responses
-- Do not invoke the same tool multiple times in a row with the same
-  arguments
 - Always try to provide a well formatted, itemized summary
 """
 
@@ -30,12 +27,25 @@ class ChatConfig:
     Stores configuration and session for chats
     """
 
-    model: str
     client: Client = Client()
+    model: str | None = None
+    max_tokens: int = 8192
     url: Optional[str] = None
     system: str = SYSTEM_PROMPT
     format: Optional[str] = None
+    provider_client: object | None = None
     debug: bool = False
+
+
+@dataclass
+class ToolResponse:
+    tool: str
+    input: object
+    _error: bool | None = None
+
+    @property
+    def is_error(self):
+        return self.error or False
 
 
 @dataclass
@@ -43,7 +53,7 @@ class ChatResponse:
     role: str
     content: str
     kind: str = "text"
-    tool: str | None = None
+    tool: ToolResponse | None = None
 
 
 class ChatProvider:
@@ -54,11 +64,19 @@ class ChatProvider:
     messages: List[dict]
     tools: List[dict]
 
-    def __init__(self, config: ChatConfig, print=print):
+    def __init__(self, config: ChatConfig | None = None, print=print):
         self.messages = []
         self.tools = []
-        self.config = config
+        self.config = config or ChatConfig()
+        if self.config.model is None:
+            self.config.model = self._default_model()
         self.print = print
+        if self.config.provider_client is not None:
+            self.provider_client = self.config.provider_client
+
+    @staticmethod
+    def _default_model() -> str:
+        return ""
 
     def _convert_tool(self, tool: Tool):
         """
@@ -66,6 +84,25 @@ class ChatProvider:
         for the given provider
         """
         return tool
+
+    def clear_history(self):
+        """
+        Clear the chat history
+        """
+        self.messages = []
+
+    def append_message(self, msg: str, role: str = "user", tool: str | None = None):
+        """
+        Add a new message to the chat
+        """
+        self.messages.append(
+            {
+                "role": role,
+                "content": msg
+                if tool is None
+                else f"Result of {tool} tool call:\n{msg}",
+            }
+        )
 
     async def chat(
         self, msg: str, tool: Optional[str] = None
@@ -96,11 +133,14 @@ async def handle_tool_call(name, f, provider) -> Iterator[ChatResponse]:
     if isinstance(f, str):
         f = json.loads(f)
     if provider.config.debug:
-        provider.print(">>", f"Calling tool: {name}")
+        provider.print(">>", f"Calling tool: {name} with input: {f}")
     try:
         res = provider.config.client.call(tool=name, input=f)
         for c in res:
             if c.type == "text":
+                yield ChatResponse(
+                    role="tool", content=c.text, tool=ToolResponse(tool=name, input=f)
+                )
                 async for res in provider.chat(c.text, tool=name):
                     yield res
             elif c.type == "image":
@@ -112,23 +152,32 @@ async def handle_tool_call(name, f, provider) -> Iterator[ChatResponse]:
                 ) as tmp:
                     tmp.write(c._data)
                     yield ChatResponse(
-                        role="tool", content=tmp.name, tool=name, kind="image"
+                        role="tool",
+                        content=tmp.name,
+                        kind="image",
+                        tool=ToolResponse(tool=name, input=f),
                     )
-    except Exception as exc:
-        s = str(exc)
-        r = provider.chat(
+    except Exception:
+        s = traceback.format_exc()
+        yield ChatResponse(
+            role="tool", content=s, tool=ToolResponse(tool=name, input=f, _error=True)
+        )
+        async for res in provider.chat(
             f"Encountered an error when calling tool \
                         {name}: {s}",
             tool=name,
-        )
-        async for res in r:
-            yield r
+        ):
+            yield res
 
 
 class Ollama(ChatProvider):
     """
     Chat using ollama
     """
+
+    @staticmethod
+    def _default_model() -> str:
+        return "qwen2.5"
 
     def _convert_tool(self, tool):
         return {
@@ -141,19 +190,12 @@ class Ollama(ChatProvider):
         }
 
     async def chat(self, msg: str, tool: Optional[str] = None):
-        if not hasattr(self, "client"):
-            self.client = OllamaClient(host=self.config.url)
+        if not hasattr(self, "provider_client"):
+            self.provider_client = OllamaClient(host=self.config.url)
         if len(self.messages) == 0:
-            self.messages.append({"role": "system", "content": self.config.system})
-        self.messages.append(
-            {
-                "role": "user" if tool is None else "tool",
-                "content": msg if tool is None else f"Result of {tool}:\n{msg}",
-            }
-        )
-        if tool is not None:
-            yield ChatResponse(role="tool", content=msg, tool=tool)
-        response: OllamaChatResponse = self.client.chat(
+            self.append_message(self.config.system, role="system")
+        self.append_message(msg, role="user" if tool is None else "tool", tool=tool)
+        response: OllamaChatResponse = self.provider_client.chat(
             model=self.config.model,
             stream=False,
             tools=self.tools,
@@ -169,12 +211,7 @@ class Ollama(ChatProvider):
                 async for res in handle_tool_call(call.function.name, f, self):
                     yield res
         if content is not None and content != "":
-            self.messages.append(
-                {
-                    "role": "assistant",
-                    "content": content,
-                }
-            )
+            self.append_message(content, role="assistant")
             yield ChatResponse(role="assistant", content=content)
 
 
@@ -193,22 +230,17 @@ class OpenAI(ChatProvider):
             },
         }
 
+    @staticmethod
+    def _default_model() -> str:
+        return "gpt-4o"
+
     async def chat(self, msg: str, tool: Optional[str] = None):
+        if not hasattr(self, "provider_client"):
+            self.provider_client = OpenAIClient(base_url=self.config.url)
         if len(self.messages) == 0:
-            self.messages.append({"role": "system", "content": self.config.system})
-        if not hasattr(self, "client"):
-            self.client = OpenAIClient(base_url=self.config.url)
-        self.messages.append(
-            {
-                "role": "user",
-                "content": msg
-                if tool is None
-                else f"Result of {tool} tool call:\n{msg}",
-            }
-        )
-        if tool is not None:
-            yield ChatResponse(role="tool", content=msg, tool=tool)
-        r = self.client.chat.completions.create(
+            self.append_message(self.config.system, role="system")
+        self.append_message(msg, tool=tool)
+        r = self.provider_client.chat.completions.create(
             messages=self.messages, model=self.config.model, tools=self.tools
         )
         for response in r.choices:
@@ -221,12 +253,7 @@ class OpenAI(ChatProvider):
                     async for res in handle_tool_call(call.function.name, f, self):
                         yield res
             if content is not None and content != "":
-                self.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": content,
-                    }
-                )
+                self.append_message(content, role="assistant")
                 yield ChatResponse(role="assistant", content=content)
 
 
@@ -242,21 +269,16 @@ class Claude(ChatProvider):
             "input_schema": tool.input_schema,
         }
 
+    @staticmethod
+    def _default_model():
+        return "claude-3-5-sonnet-latest"
+
     async def chat(self, msg: str, tool: Optional[str] = None):
-        if not hasattr(self, "client"):
-            self.client = AsyncAnthropic(base_url=self.config.url)
-        self.messages.append(
-            {
-                "role": "user",
-                "content": msg
-                if tool is None
-                else f"Result of {tool} tool call:\n{msg}",
-            }
-        )
-        if tool is not None:
-            yield ChatResponse(role="tool", content=msg, tool=tool)
-        res = await self.client.messages.create(
-            max_tokens=1024,
+        if not hasattr(self, "provider_client"):
+            self.provider_client = AsyncAnthropic(base_url=self.config.url)
+        self.append_message(msg, tool=tool)
+        res = await self.provider_client.messages.create(
+            max_tokens=self.config.max_tokens,
             messages=self.messages,
             model=self.config.model,
             tools=self.tools,
@@ -266,13 +288,27 @@ class Claude(ChatProvider):
             if self.config.debug:
                 self.print(block)
             if block.type == "text":
-                self.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": block.text,
-                    }
-                )
+                self.append_message(block.text, role="assistant")
                 yield ChatResponse(role="assistant", content=block.text)
             elif block.type == "tool_use":
                 async for res in handle_tool_call(block.name, block.input, self):
                     yield res
+
+
+class Chat:
+    provider: ChatProvider
+
+    def __init__(self, provider=Claude, *args, **kw):
+        config = None
+        if len(args) > 0 and isinstance(args[0], ChatConfig):
+            config = args[0]
+        elif "config" in kw:
+            config = kw["config"]
+        else:
+            config = ChatConfig(*args, **kw)
+        self.provider = provider(config=config)
+
+    async def chat(self, msg: str, tool: Optional[str] = None):
+        self.provider.get_tools()
+        async for res in self.provider.chat(msg, tool=tool):
+            yield res
