@@ -76,6 +76,19 @@ async def chat_loop(provider):
         async for res in provider.chat(msg):
             if res.role == "assistant":
                 print(">>", res.content)
+            elif res.role == "tool":
+                print(
+                    ">>",
+                    f"Calling {res.tool.tool}",
+                )
+                print(
+                    ">>",
+                    f"Input: {res.tool.input}",
+                )
+                print(
+                    ">>",
+                    f"Result: {res.content}",
+                )
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True

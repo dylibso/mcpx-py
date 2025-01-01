@@ -29,7 +29,7 @@ class ChatConfig:
 
     client: Client = Client()
     model: str | None = None
-    max_tokens: int = 8192
+    max_tokens: int = 4096
     url: Optional[str] = None
     system: str = SYSTEM_PROMPT
     format: Optional[str] = None
@@ -100,7 +100,7 @@ class ChatProvider:
                 "role": role,
                 "content": msg
                 if tool is None
-                else f"Result of {tool} tool call:\n{msg}",
+                else f"{tool} output: {msg}",
             }
         )
 
@@ -285,14 +285,15 @@ class Claude(ChatProvider):
             system=self.config.system,
         )
         for block in res.content:
+            if block.type == "tool_use":
+                async for res in handle_tool_call(block.name, block.input, self):
+                    yield res
+        for block in res.content:
             if self.config.debug:
                 self.print(block)
             if block.type == "text":
                 self.append_message(block.text, role="assistant")
                 yield ChatResponse(role="assistant", content=block.text)
-            elif block.type == "tool_use":
-                async for res in handle_tool_call(block.name, block.input, self):
-                    yield res
 
 
 class Chat:
