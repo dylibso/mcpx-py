@@ -268,11 +268,13 @@ class Client:
 
     def call(
         self,
-        tool: str,
+        tool: str | Tool,
         input: dict = {},
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
     ):
+        if isinstance(tool, Tool):
+            tool = tool.name
         install, t = self.tools[tool]
         plugin = self.plugin(install, wasi=wasi, functions=functions)
         return plugin.call(tool=tool, input=input)

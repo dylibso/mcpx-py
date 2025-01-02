@@ -133,46 +133,49 @@ class ChatProvider:
                 self.tools.append(self._convert_tool(tool))
         return self.tools
 
-
-async def handle_tool_call(name, f, provider) -> Iterator[ChatResponse]:
-    if isinstance(f, str):
-        f = json.loads(f)
-    if provider.config.debug:
-        provider.print(">>", f"Calling tool: {name} with input: {f}")
-    try:
-        res = provider.config.client.call(tool=name, input=f)
-        for c in res:
-            if c.type == "text":
-                yield ChatResponse(
-                    role="tool", content=c.text, tool=ToolResponse(tool=name, input=f)
-                )
-                async for res in provider.chat(c.text, tool=name):
-                    yield res
-            elif c.type == "image":
-                ext = ".jpg"
-                if c.mime_type == "image/png":
-                    ext = ".png"
-                with tempfile.NamedTemporaryFile(
-                    suffix=ext, delete=False, delete_on_close=False
-                ) as tmp:
-                    tmp.write(c._data)
+    async def call_tool(self, name, input) -> Iterator[ChatResponse]:
+        if isinstance(input, str):
+            input = json.loads(input)
+        if self.config.debug:
+            self.print(">>", f"Calling tool: {name} with input: {input}")
+        try:
+            res = self.config.client.call(tool=name, input=input)
+            for c in res:
+                if c.type == "text":
                     yield ChatResponse(
                         role="tool",
-                        content=tmp.name,
-                        kind="image",
-                        tool=ToolResponse(tool=name, input=f),
+                        content=c.text,
+                        tool=ToolResponse(tool=name, input=input),
                     )
-    except Exception:
-        s = traceback.format_exc()
-        yield ChatResponse(
-            role="tool", content=s, tool=ToolResponse(tool=name, input=f, _error=True)
-        )
-        async for res in provider.chat(
-            f"Encountered an error when calling tool \
-                        {name}: {s}",
-            tool=name,
-        ):
-            yield res
+                    async for res in self.chat(c.text, tool=name):
+                        yield res
+                elif c.type == "image":
+                    ext = ".jpg"
+                    if c.mime_type == "image/png":
+                        ext = ".png"
+                    with tempfile.NamedTemporaryFile(
+                        suffix=ext, delete=False, delete_on_close=False
+                    ) as tmp:
+                        tmp.write(c._data)
+                        yield ChatResponse(
+                            role="tool",
+                            content=tmp.name,
+                            kind="image",
+                            tool=ToolResponse(tool=name, input=input),
+                        )
+        except Exception:
+            s = traceback.format_exc()
+            yield ChatResponse(
+                role="tool",
+                content=s,
+                tool=ToolResponse(tool=name, input=input, _error=True),
+            )
+            async for res in self.chat(
+                f"Encountered an error when calling tool \
+                            {name}: {s}",
+                tool=name,
+            ):
+                yield res
 
 
 class Ollama(ChatProvider):
@@ -216,7 +219,7 @@ class Ollama(ChatProvider):
         if response.message.tool_calls is not None:
             for call in response.message.tool_calls:
                 f = call.function.arguments
-                async for res in handle_tool_call(call.function.name, f, self):
+                async for res in self.call_tool(call.function.name, f):
                     yield res
 
 
@@ -266,7 +269,7 @@ class OpenAI(ChatProvider):
             ):
                 for call in response.message.tool_calls:
                     f = call.function.arguments
-                    async for res in handle_tool_call(call.function.name, f, self):
+                    async for res in self.call_tool(call.function.name, f):
                         yield res
 
 
@@ -303,7 +306,7 @@ class Gemini(OpenAI):
             if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
                     f = call.function.arguments
-                    async for res in handle_tool_call(call.function.name, f, self):
+                    async for res in self.call_tool(call.function.name, f):
                         yield res
 
             # TODO: remove this, checking `toolCalls` is only required for now because of a bug
@@ -315,9 +318,7 @@ class Gemini(OpenAI):
             ):
                 for call in response.message.toolCalls:
                     f = call["function"]["arguments"]
-                    async for res in handle_tool_call(
-                        call["function"]["name"], f, self
-                    ):
+                    async for res in self.call_tool(call["function"]["name"], f):
                         yield res
 
 
@@ -354,7 +355,7 @@ class Claude(ChatProvider):
             if self.config.debug:
                 self.print(block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
-                async for res in handle_tool_call(block.name, block.input, self):
+                async for res in self.call_tool(block.name, block.input):
                     yield res
             elif block.type == "text":
                 self.append_message(block.text, role="assistant")
