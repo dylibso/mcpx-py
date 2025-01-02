@@ -12,46 +12,121 @@ import extism as ext
 
 @dataclass
 class Endpoints:
+    """
+    Manages mcp.run endpoints
+    """
+
     base: str
+    """
+    mcp.run base URL
+    """
 
     @property
     def installations(self):
+        """
+        List installations
+        """
         return f"{self.base}/api/profiles/~/default/installations"
 
-    def content(self, addr):
+    def content(self, addr: str):
+        """
+        Get the data associated with a content address
+        """
         return f"{self.base}/api/c/{addr}"
 
 
 @dataclass
 class Tool:
+    """
+    A tool definition
+    """
+
     name: str
+    """
+    Name of the tool
+    """
+
     description: str
+    """
+    Information about the tool and how to use it
+    """
+
     input_schema: dict
+    """
+    Input parameter schema
+    """
 
 
 @dataclass
 class Install:
+    """
+    An installed servlet
+    """
+
     name: str
+    """
+    Servlet name
+    """
+
     slug: str
-    binding_id: str
+    """
+    Servlet slug
+    """
+
     content_addr: str
+    """
+    Content address for WASM module
+    """
+
     settings: dict
+    """
+    Servlet settings and permissions
+    """
+
     tools: Dict[str, Tool]
+    """
+    All tools provided by the servlet
+    """
+
     content: bytes | None = None
+    """
+    Cached WASM module data
+    """
 
 
 @dataclass
 class Content:
+    """
+    The result of tool calls
+    """
+
     type: str
+    """
+    The type of content, for example "text" or "image"
+    """
+
     mime_type: str = "text/plain"
+    """
+    Content mime type
+    """
+
     _data: bytes | None = None
+    """
+    Result message or data
+    """
 
     @property
     def text(self):
+        """
+        Get the result message
+        """
         return self.data.decode()
 
     @property
     def data(self):
+        """
+        Get the result as bytes
+        """
         return self._data or b""
 
 
@@ -64,6 +139,9 @@ class InstalledPlugin:
         self._plugin = plugin
 
     def call(self, tool: str | None = None, input: dict = {}):
+        """
+        Call a tool with the given input
+        """
         if tool is None:
             tool = self._install.name
         j = json.dumps({"params": {"arguments": input, "name": tool}})
@@ -126,8 +204,19 @@ def _default_session_id() -> str:
 
 @dataclass
 class ClientConfig:
+    """
+    Configures an mcp.run Client
+    """
+
     base_url: str = "https://www.mcp.run"
+    """
+    mcp.run base URL
+    """
+
     tool_refresh_time: timedelta = timedelta(minutes=1)
+    """
+    Length of time to wait between checking for new tools
+    """
 
 
 class Cache[K, T]:
@@ -160,11 +249,34 @@ class Cache[K, T]:
 
 
 class Client:
+    """
+    mcp.run API client
+    """
+
     config: ClientConfig
+    """
+    Client configuration
+    """
+
     session_id: str
+    """
+    mcp.run session ID
+    """
+
     endpoints: Endpoints
+    """
+    mcp.run endpoint manager
+    """
+
     install_cache: Cache[str, Install]
+    """
+    Cache of Installs
+    """
+
     plugin_cache: Cache[str, InstalledPlugin]
+    """
+    Cache of InstalledPlugins
+    """
 
     def __init__(
         self,
@@ -179,6 +291,10 @@ class Client:
         self.plugin_cache = Cache()
 
     def list_installs(self) -> Iterator[Install]:
+        """
+        List all installed servlets, this will make an HTTP
+        request each time
+        """
         url = self.endpoints.installations
         res = requests.get(
             url,
@@ -213,6 +329,10 @@ class Client:
 
     @property
     def installs(self) -> Dict[str, Install]:
+        """
+        Get all installed servlets, this will returned cached Installs if
+        the cache timeout hasn't been reached
+        """
         if self.install_cache.needs_refresh():
             self.install_cache.clear()
             self.plugin_cache.clear()
@@ -222,6 +342,9 @@ class Client:
 
     @property
     def tools(self) -> Dict[str, Tuple[Install, Tool]]:
+        """
+        Get all tools and their associated Install object
+        """
         installs = self.installs
         tools = {}
         for install in installs.values():
@@ -235,6 +358,9 @@ class Client:
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
     ) -> InstalledPlugin:
+        """
+        Instantiate an installed servlet, turning it into an InstalledPlugin
+        """
         cache_name = f"{install.name}-{wasi}"
         if functions is not None:
             for func in functions:
@@ -273,6 +399,9 @@ class Client:
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
     ):
+        """
+        Call a tool with the given input
+        """
         if isinstance(tool, Tool):
             tool = tool.name
         install, t = self.tools[tool]
