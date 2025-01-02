@@ -22,7 +22,7 @@ async def main():
 
     # Prompt claude and iterate over the results
     async for response in llm.send_message(
-        "what is the total volume of nine three foot by 5 foot boxes"
+        "what is the total volume of nine three foot by 5 foot by four foot boxes"
     ):
         print(response)
 

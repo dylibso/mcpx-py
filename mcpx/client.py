@@ -56,9 +56,14 @@ class Tool:
     Input parameter schema
     """
 
+    servlet: 'Servlet'
+    """
+    The servlet the tool belongs to
+    """
+
 
 @dataclass
-class Install:
+class Servlet:
     """
     An installed servlet
     """
@@ -148,7 +153,7 @@ class CallResult:
 
 
 class InstalledPlugin:
-    _install: Install
+    _install: Servlet
     _plugin: ext.Plugin
 
     def __init__(self, install, plugin):
@@ -285,7 +290,7 @@ class Client:
     mcp.run endpoint manager
     """
 
-    install_cache: Cache[str, Install]
+    install_cache: Cache[str, Servlet]
     """
     Cache of Installs
     """
@@ -307,7 +312,7 @@ class Client:
         self.install_cache = Cache(config.tool_refresh_time)
         self.plugin_cache = Cache()
 
-    def list_installs(self) -> Iterator[Install]:
+    def list_installs(self) -> Iterator[Servlet]:
         """
         List all installed servlets, this will make an HTTP
         request each time
@@ -327,25 +332,25 @@ class Client:
                 tools = tools["tools"]
             else:
                 tools = [tools]
-            t = {}
-            for tool in tools:
-                t[tool["name"]] = Tool(
-                    name=tool["name"],
-                    description=tool["description"],
-                    input_schema=tool["inputSchema"],
-                )
-            install = Install(
+            install = Servlet(
                 binding_id=binding["id"],
                 content_addr=binding["contentAddress"],
                 name=install["name"],
                 slug=install["servlet"]["slug"],
                 settings=install["settings"],
-                tools=t,
+                tools={},
             )
+            for tool in tools:
+                install.tools[tool["name"]] = Tool(
+                    name=tool["name"],
+                    description=tool["description"],
+                    input_schema=tool["inputSchema"],
+                    servlet=install,
+                )
             yield install
 
     @property
-    def installs(self) -> Dict[str, Install]:
+    def installs(self) -> Dict[str, Servlet]:
         """
         Get all installed servlets, this will returned cached Installs if
         the cache timeout hasn't been reached
@@ -358,7 +363,7 @@ class Client:
         return self.install_cache.items
 
     @property
-    def tools(self) -> Dict[str, Tuple[Install, Tool]]:
+    def tools(self) -> Dict[str, Tool]:
         """
         Get all tools and their associated Install object
         """
@@ -366,12 +371,12 @@ class Client:
         tools = {}
         for install in installs.values():
             for tool in install.tools.values():
-                tools[tool.name] = (install, tool)
+                tools[tool.name] = tool
         return tools
 
     def plugin(
         self,
-        install: Install,
+        install: Servlet,
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
     ) -> InstalledPlugin:
@@ -419,8 +424,7 @@ class Client:
         """
         Call a tool with the given input
         """
-        if isinstance(tool, Tool):
-            tool = tool.name
-        install, t = self.tools[tool]
-        plugin = self.plugin(install, wasi=wasi, functions=functions)
-        return plugin.call(tool=tool, input=input)
+        if isinstance(tool, str):\
+            tool = self.tools[tool]
+        plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions)
+        return plugin.call(tool=tool.name, input=input)
