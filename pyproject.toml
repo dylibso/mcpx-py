@@ -17,6 +17,7 @@ dependencies = [
 [tool.uv]
 package = true
 dev-dependencies = [
+    "python-lsp-ruff>=2.2.2",
     "python-lsp-server>=1.12.0",
     "ruff>=0.8.1",
 ]
