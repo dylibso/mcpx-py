@@ -216,7 +216,7 @@ class ChatProvider:
                 continue
             for tool in t.tools.values():
                 if self.config.debug:
-                    self.print("FOUND TOOL:", tool.name)
+                    self.print("DEBUG>>", "FOUND TOOL:", tool.name)
                 self.tools.append(self._convert_tool(tool))
         return self.tools
 
@@ -227,7 +227,7 @@ class ChatProvider:
         if isinstance(input, str):
             input = json.loads(input)
         if self.config.debug:
-            self.print(">>", f"Calling tool: {name} with input: {input}")
+            self.print("DEBUG>>", f"Calling tool: {name} with input: {input}")
         try:
             res = self.config.client.call(tool=name, input=input)
             for c in res:
@@ -303,7 +303,7 @@ class Ollama(ChatProvider):
             format=self.config.format,
         )
         if self.config.debug:
-            self.print(response)
+            self.print("DEBUG>>", response)
         content = response.message.content
         if content is not None and content != "":
             self.append_message(content, role="assistant")
@@ -352,7 +352,7 @@ class OpenAI(ChatProvider):
         )
         for response in r.choices:
             if self.config.debug:
-                self.print(response)
+                self.print("DEBUG>>", response)
             content = response.message.content
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
@@ -391,7 +391,7 @@ class Gemini(OpenAI):
         )
         for response in r.choices:
             if self.config.debug:
-                self.print(response)
+                self.print("DEBUG>>", response)
             if response.message is None:
                 continue
             content = response.message.content
@@ -451,7 +451,7 @@ class Claude(ChatProvider):
         )
         for block in res.content:
             if self.config.debug:
-                self.print(block)
+                self.print("DEBUG>>", block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
                 async for res in self.call_tool(block.name, block.input):
                     yield res
