@@ -21,10 +21,10 @@ async def main():
     # llm = Chat(Gemini)
 
     # Prompt claude and iterate over the results
-    async for message in llm.chat(
-        "what is the total surface area of ten three foot cubes"
+    async for response in llm.send_message(
+        "what is the total volume of nine three foot by 5 foot boxes"
     ):
-        print(message)
+        print(response)
 
 
 if __name__ == "__main__":

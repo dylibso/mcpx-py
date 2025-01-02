@@ -9,5 +9,5 @@ client = Client()  # Create the client, this will check the
 results = client.call("eval-js", {"code": "'Hello, world!'"})
 
 # Iterate over the results
-for content in results:
+for content in results.content:
     print(content.text)
