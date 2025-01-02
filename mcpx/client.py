@@ -73,6 +73,11 @@ class Install:
     Servlet slug
     """
 
+    binding_id: str
+    """
+    Servlet binding ID
+    """
+
     content_addr: str
     """
     Content address for WASM module
@@ -130,6 +135,18 @@ class Content:
         return self._data or b""
 
 
+@dataclass
+class CallResult:
+    """
+    Result of a tool call
+    """
+
+    content: List[Content]
+    """
+    Content returned from a call
+    """
+
+
 class InstalledPlugin:
     _install: Install
     _plugin: ext.Plugin
@@ -138,7 +155,7 @@ class InstalledPlugin:
         self._install = install
         self._plugin = plugin
 
-    def call(self, tool: str | None = None, input: dict = {}):
+    def call(self, tool: str | None = None, input: dict = {}) -> CallResult:
         """
         Call a tool with the given input
         """
@@ -161,7 +178,7 @@ class InstalledPlugin:
                         mime_type=c["mimeType"],
                     )
                 )
-        return out
+        return CallResult(content=out)
 
 
 def _parse_mcpx_config(filename: str | Path) -> str | None:
@@ -398,7 +415,7 @@ class Client:
         input: dict = {},
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
-    ):
+    ) -> CallResult:
         """
         Call a tool with the given input
         """

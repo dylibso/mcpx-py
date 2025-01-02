@@ -9,7 +9,7 @@ import traceback
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini
+from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini, Chat
 from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """
@@ -44,7 +44,7 @@ async def tool_cmd(args):
         print(f"Unexpected error: {str(e)}")
 
 
-async def chat_loop(provider):
+async def chat_loop(chat):
     try:
         msg = input("> ").strip()
 
@@ -54,11 +54,11 @@ async def chat_loop(provider):
                 print(CHAT_HELP)
                 return True
             elif msg == "!clear":
-                provider.messages = []
+                chat.clear_history()
                 print("Chat history cleared")
                 return True
             elif msg == "!tools":
-                tools = provider.get_tools(provider.config.session)
+                tools = chat.provider.get_tools(provider.config.session)
                 print("\nAvailable tools:")
                 for tool in tools:
                     print(f"- {tool.name}")
@@ -71,15 +71,13 @@ async def chat_loop(provider):
                 return False
         if msg == "":
             return True
-        # TODO: maybe avoid fetching tools for each prompt
-        provider.get_tools()
-        async for res in provider.chat(msg):
+        async for res in chat.send_message(msg):
             if res.role == "assistant":
                 print(">>", res.content)
             elif res.role == "tool":
                 print(
                     ">>",
-                    f"Calling {res.tool.tool}",
+                    f"Calling {res.tool.name}",
                 )
                 print(
                     ">>",
@@ -106,15 +104,15 @@ async def chat_cmd(args):
     )
     provider = None
     if args.provider == "ollama":
-        provider = Ollama(config)
+        provider = Ollama
     elif args.provider == "claude":
-        provider = Claude(config)
+        provider = Claude
     elif args.provider == "openai":
-        provider = OpenAI(config)
+        provider = OpenAI
     elif args.provider == "gemini":
-        provider = Gemini(config)
+        provider = Gemini
     while True:
-        ok = await chat_loop(provider)
+        ok = await chat_loop(Chat(provider, config))
         if not ok:
             break
 

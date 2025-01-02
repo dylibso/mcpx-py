@@ -85,8 +85,8 @@ class ChatConfig:
 
 
 @dataclass
-class ToolResponse:
-    tool: str
+class ToolCall:
+    name: str
     """
     Tool name
     """
@@ -95,18 +95,6 @@ class ToolResponse:
     """
     The input that was passed to the tool
     """
-
-    _error: bool | None = None
-    """
-    Set to True when the tool raised an error
-    """
-
-    @property
-    def is_error(self):
-        """
-        Check if an error occured
-        """
-        return self.error or False
 
 
 @dataclass
@@ -133,11 +121,23 @@ class ChatResponse:
     Message kind, for example "text" or "image"
     """
 
-    tool: ToolResponse | None = None
+    tool: ToolCall | None = None
     """
     If role is "tool" then this contains additional information about the
     tool call
     """
+
+    _error: bool | None = None
+    """
+    Set to True when the tool raised an error
+    """
+
+    @property
+    def is_error(self):
+        """
+        Check if an error occured
+        """
+        return self.error or False
 
 
 class ChatProvider:
@@ -230,12 +230,12 @@ class ChatProvider:
             self.print("DEBUG>>", f"Calling tool: {name} with input: {input}")
         try:
             res = self.config.client.call(tool=name, input=input)
-            for c in res:
+            for c in res.content:
                 if c.type == "text":
                     yield ChatResponse(
                         role="tool",
                         content=c.text,
-                        tool=ToolResponse(tool=name, input=input),
+                        tool=ToolCall(name=name, input=input),
                     )
                     async for res in self.chat(c.text, tool=name):
                         yield res
@@ -251,14 +251,15 @@ class ChatProvider:
                             role="tool",
                             content=tmp.name,
                             kind="image",
-                            tool=ToolResponse(tool=name, input=input),
+                            tool=ToolCall(name=name, input=input),
                         )
         except Exception:
             s = traceback.format_exc()
             yield ChatResponse(
                 role="tool",
                 content=s,
-                tool=ToolResponse(tool=name, input=input, _error=True),
+                tool=ToolResponse(name=name, input=input),
+                _error=True,
             )
             async for res in self.chat(
                 f"Encountered an error when calling tool \
@@ -489,7 +490,13 @@ class Chat:
         """
         return self.provider.config.client
 
-    async def chat(self, msg: str) -> Iterator[ChatResponse]:
+    def clear_history(self):
+        """
+        Clear chat history
+        """
+        self.provider.clear_history
+
+    async def send_message(self, msg: str) -> Iterator[ChatResponse]:
         """
         Send a chat message to the LLM, returning an iterator of ChatResponse
         """
