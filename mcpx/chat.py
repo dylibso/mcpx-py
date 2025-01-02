@@ -258,7 +258,7 @@ class ChatProvider:
             yield ChatResponse(
                 role="tool",
                 content=s,
-                tool=ToolResponse(name=name, input=input),
+                tool=ToolCall(name=name, input=input),
                 _error=True,
             )
             async for res in self.chat(

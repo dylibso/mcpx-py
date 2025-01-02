@@ -65,7 +65,7 @@ class Tool:
 @dataclass
 class Servlet:
     """
-    An installed servlet
+    An mcpx servlet
     """
 
     name: str
@@ -91,6 +91,11 @@ class Servlet:
     settings: dict
     """
     Servlet settings and permissions
+    """
+
+    installed: bool
+    """
+    Marks whether the servlet is installed
     """
 
     tools: Dict[str, Tool]
@@ -333,6 +338,7 @@ class Client:
             else:
                 tools = [tools]
             install = Servlet(
+                installed=True,
                 binding_id=binding["id"],
                 content_addr=binding["contentAddress"],
                 name=install["name"],
@@ -361,11 +367,11 @@ class Client:
             for install in self.list_installs():
                 self.install_cache.add(install.name, install)
         return self.install_cache.items
-
+    
     @property
     def tools(self) -> Dict[str, Tool]:
         """
-        Get all tools and their associated Install object
+        Get all tools from all installed servlets
         """
         installs = self.installs
         tools = {}
@@ -373,6 +379,16 @@ class Client:
             for tool in install.tools.values():
                 tools[tool.name] = tool
         return tools
+
+    def tool(self, name: str) -> Tool | None:
+        """
+        Get a tool by name
+        """
+        for install in self.installs.values():
+            for tool in install.tools.values():
+                if tool.name == name:
+                    return tool
+        return None
 
     def plugin(
         self,
@@ -425,6 +441,6 @@ class Client:
         Call a tool with the given input
         """
         if isinstance(tool, str):\
-            tool = self.tools[tool]
+            tool = self.tool(tool)
         plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions)
         return plugin.call(tool=tool.name, input=input)
