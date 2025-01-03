@@ -494,7 +494,7 @@ class Chat:
         """
         Clear chat history
         """
-        self.provider.clear_history
+        self.provider.clear_history()
 
     async def send_message(self, msg: str) -> Iterator[ChatResponse]:
         """
