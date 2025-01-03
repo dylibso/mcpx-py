@@ -151,6 +151,11 @@ class ChatProvider:
     A list of converted tool objects
     """
 
+    config: ChatConfig
+    """
+    Chat configuration options
+    """
+
     def __init__(self, config: ChatConfig | None = None):
         self.messages = []
         self.tools = []

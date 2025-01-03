@@ -108,8 +108,9 @@ async def chat_cmd(client, args):
         provider = OpenAI
     elif args.provider == "gemini":
         provider = Gemini
+    chat = Chat(provider, config)
     while True:
-        ok = await chat_loop(Chat(provider, config))
+        ok = await chat_loop(chat)
         if not ok:
             break
 
@@ -141,7 +142,7 @@ async def run(args):
         print(f"Warning: Could not setup command history: {str(e)}")
 
     client = Client()
-    if args.log_level != "off":
+    if args.log_level is not None and args.log_level != "off":
         level = logging.getLevelName(args.log_level.upper())
         client.configure_logging(level=level)
 
