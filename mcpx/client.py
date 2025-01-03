@@ -108,6 +108,18 @@ class Servlet:
     Cached WASM module data
     """
 
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return (
+            self.tools == other.tools and
+            self.settings == other.settings and
+            self.content_addr == other.content_addr and
+            self.binding_id == other.binding_id and
+            self.slug == other.slug and
+            self.name == other.name
+        )
+
 
 @dataclass
 class Content:
@@ -228,6 +240,13 @@ def _default_session_id() -> str:
 
     raise Exception("No mcpx session ID found")
 
+def _default_update_interval():
+    ms = os.environ.get("MCPX_UPDATE_INTERVAL")
+    if ms is None:
+        return timedelta(minutes=1)
+    else:
+        return timedelta(milliseconds=int(ms))
+
 
 @dataclass
 class ClientConfig:
@@ -235,12 +254,12 @@ class ClientConfig:
     Configures an mcp.run Client
     """
 
-    base_url: str = "https://www.mcp.run"
+    base_url: str = os.environ.get("MCPX_RUN_ORIGIN", "https://www.mcp.run")
     """
     mcp.run base URL
     """
 
-    tool_refresh_time: timedelta = timedelta(minutes=1)
+    tool_refresh_time: timedelta = _default_update_interval()
     """
     Length of time to wait between checking for new tools
     """
@@ -260,7 +279,13 @@ class Cache[K, T]:
         self.items[key] = item
 
     def remove(self, key: K):
-        del self.items[key]
+        self.items.pop(key, None)
+
+    def get(self, key: K) -> T | None:
+        self.items.get(key)
+
+    def __in__(self, key: K) -> bool:
+        return key in self.items
 
     def clear(self):
         self.items = {}
@@ -362,10 +387,16 @@ class Client:
         the cache timeout hasn't been reached
         """
         if self.install_cache.needs_refresh():
-            self.install_cache.clear()
-            self.plugin_cache.clear()
+            visited = set()
             for install in self.list_installs():
-                self.install_cache.add(install.name, install)
+                if install != self.install_cache.get(install.name):
+                    self.install_cache.add(install.name, install)
+                    self.plugin_cache.remove(install.name)
+                visited.add(install.name)
+            for install_name in self.install_cache.items:
+                if not install_name in visited:
+                    self.install_cache.remove(install_name)
+                    self.plugin_cache.remove(install_name)
         return self.install_cache.items
     
     @property
