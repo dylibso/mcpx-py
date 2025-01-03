@@ -377,7 +377,7 @@ class Client:
         request each time
         """
         url = self.endpoints.installations
-        self.logger.info("Listing installed mcp.run servlets from {url}")
+        self.logger.info(f"Listing installed mcp.run servlets from {url}")
         res = requests.get(
             url,
             cookies={
@@ -385,7 +385,7 @@ class Client:
             },
         )
         data = res.json()
-        self.logger.info("Got response from {url}:", data)
+        self.logger.debug(f"Got installed servlets from {url}: {data}")
         for install in data["installs"]:
             binding = install["binding"]
             tools = install["servlet"]["meta"]["schema"]
@@ -471,7 +471,7 @@ class Client:
         if cache_name in self.plugin_cache.items:
             return self.plugin_cache.items[cache_name]
         if install.content is None:
-            self.logger.info("Fetching servlet Wasm for {install.name}", install.content_addr) 
+            self.logger.info(f"Fetching servlet Wasm for {install.name}: {install.content_addr}") 
             res = requests.get(
                 self.endpoints.content(install.content_addr),
                 cookies={

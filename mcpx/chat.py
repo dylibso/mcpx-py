@@ -151,15 +151,15 @@ class ChatProvider:
     A list of converted tool objects
     """
 
-    def __init__(self, config: ChatConfig | None = None, print=print):
+    def __init__(self, config: ChatConfig | None = None):
         self.messages = []
         self.tools = []
         self.config = config or ChatConfig()
         if self.config.model is None:
             self.config.model = self._default_model()
-        self.print = print
         if self.config.provider_client is not None:
             self.provider_client = self.config.provider_client
+        self.logger = config.client.logger.getChild("chat")
 
     @staticmethod
     def _default_model() -> str:
@@ -201,10 +201,6 @@ class ChatProvider:
         """
         pass
 
-    @property
-    def _logger(self):
-        return self.config.client.logger
-
     def get_tools(self) -> List[object]:
         """
         Get all tools from the mcp server
@@ -215,7 +211,7 @@ class ChatProvider:
             if t is None:
                 continue
             for tool in t.tools.values():
-                self._logger.debug("Tool:", tool.name)
+                self.logger.info(f"Tool: {tool.name}")
                 self.tools.append(self._convert_tool(tool))
         return self.tools
 
@@ -225,7 +221,7 @@ class ChatProvider:
         """
         if isinstance(input, str):
             input = json.loads(input)
-        self._logger.debug(f"Calling tool: {name} with input: {input}")
+        self.logger.info(f"Calling tool: {name} with input: {input}")
         try:
             res = self.config.client.call(tool=name, input=input)
             for c in res.content:
@@ -301,7 +297,7 @@ class Ollama(ChatProvider):
             messages=self.messages,
             format=self.config.format,
         )
-        self._logger.debug("Response:", response)
+        self.logger.debug("Response:", response)
         content = response.message.content
         if content is not None and content != "":
             self.append_message(content, role="assistant")
@@ -349,7 +345,7 @@ class OpenAI(ChatProvider):
             max_completion_tokens=self.config.max_tokens,
         )
         for response in r.choices:
-            self._logger.debug("Response", response)
+            self.logger.debug("Response", response)
             content = response.message.content
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
@@ -387,7 +383,7 @@ class Gemini(OpenAI):
             max_tokens=self.config.max_tokens,
         )
         for response in r.choices:
-            self._logger.debug(response)
+            self.logger.debug(response)
             if response.message is None:
                 continue
             content = response.message.content
@@ -446,7 +442,7 @@ class Claude(ChatProvider):
             system=self.config.system,
         )
         for block in res.content:
-            self._logger.debug(block)
+            self.logger.debug(block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
                 async for res in self.call_tool(block.name, block.input):
                     yield res
