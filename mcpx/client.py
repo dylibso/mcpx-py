@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 import json
 from pathlib import Path
-from typing import Iterator, Dict, List, Tuple
+from typing import Iterator, Dict, List
 from datetime import datetime, timedelta
 import base64
 import logging
@@ -426,7 +426,7 @@ class Client:
                     self.plugin_cache.remove(install.name)
                 visited.add(install.name)
             for install_name in self.install_cache.items:
-                if not install_name in visited:
+                if install_name not in visited:
                     self.install_cache.remove(install_name)
                     self.plugin_cache.remove(install_name)
         return self.install_cache.items
@@ -458,6 +458,7 @@ class Client:
         install: Servlet,
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
+        wasm: List[object] | None = None,
     ) -> InstalledPlugin:
         """
         Instantiate an installed servlet, turning it into an InstalledPlugin
@@ -471,7 +472,9 @@ class Client:
         if cache_name in self.plugin_cache.items:
             return self.plugin_cache.items[cache_name]
         if install.content is None:
-            self.logger.info(f"Fetching servlet Wasm for {install.name}: {install.content_addr}") 
+            self.logger.info(
+                f"Fetching servlet Wasm for {install.name}: {install.content_addr}"
+            )
             res = requests.get(
                 self.endpoints.content(install.content_addr),
                 cookies={
@@ -480,8 +483,11 @@ class Client:
             )
             install.content = res.content
         perm = install.settings["permissions"]
+        wasm_modules = [{"data": install.content}]
+        if wasm is not None:
+            wasm_modules.extend(wasm)
         manifest = {
-            "wasm": [{"data": install.content}],
+            "wasm": wasm_modules,
             "allowed_paths": perm["filesystem"].get("volumes", {}),
             "allowed_hosts": perm["network"].get("domains", []),
             "config": install.settings.get("config", {}),
@@ -500,11 +506,12 @@ class Client:
         input: dict = {},
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
+        wasm: List[object] | None = None,
     ) -> CallResult:
         """
         Call a tool with the given input
         """
         if isinstance(tool, str):
             tool = self.tool(tool)
-        plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions)
+        plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions, wasm=wasm)
         return plugin.call(tool=tool.name, input=input)

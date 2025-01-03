@@ -43,10 +43,24 @@ async def tool_cmd(client, args):
         print(f"Unexpected error: {str(e)}")
 
 
+EXIT_COUNT = 0
+
+
 async def chat_loop(chat):
+    global EXIT_COUNT
     try:
         msg = input("> ").strip()
+        EXIT_COUNT = 0
+    except EOFError:
+        if EXIT_COUNT == 0:
+            print("\nPress Ctrl+D again to exit")
+        else:
+            EXIT_COUNT = 0
+            return False
+        EXIT_COUNT += 1
+        return True
 
+    try:
         # Handle special commands
         if msg.startswith("!") or msg == "exit" or msg == "quit":
             if msg == "!help":
@@ -57,7 +71,7 @@ async def chat_loop(chat):
                 print("Chat history cleared")
                 return True
             elif msg == "!tools":
-                tools = chat.provider.get_tools(provider.config.session)
+                tools = chat.provider.get_tools()
                 print("\nAvailable tools:")
                 for tool in tools:
                     print(f"- {tool.name}")
