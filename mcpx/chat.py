@@ -208,14 +208,16 @@ class ChatProvider:
         pass
 
     def _builtin_tools(self) -> List[object]:
-        return [builtin_tools.search]
+        return [
+            self._convert_tool(builtin_tools.SEARCH)
+        ]
 
     def get_tools(self) -> List[object]:
         """
         Get all tools from the mcp server
         """
         tools = self.config.client.installs
-        self.tools = [self._convert_tool(t) for t in self._builtin_tools()]
+        self.tools = self._builtin_tools()
         for name, t in tools.items():
             if t is None:
                 continue

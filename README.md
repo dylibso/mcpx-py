@@ -34,13 +34,13 @@ A Python library and command line client for https://www.mcp.run. This tool enab
 Using `uv`:
 
 ```bash
-$ uv add git+https://github.com/dylibso/extism-py
+$ uv add git+https://github.com/dylibso/mcpx-py
 ```
 
 Or `pip`:
 
 ```bash
-$ pip install git+https://github.com/dylibso/extism-py
+$ pip install git+https://github.com/dylibso/mcpx-py
 ```
 
 ### Example code
