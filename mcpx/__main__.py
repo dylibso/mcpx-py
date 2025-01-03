@@ -6,6 +6,7 @@ import argparse
 import json
 import psutil
 import traceback
+import logging
 
 from dotenv import load_dotenv
 
@@ -22,8 +23,7 @@ Available commands:
 """
 
 
-async def list_cmd(args):
-    client = Client()
+async def list_cmd(client, args):
     for install in client.installs.values():
         for tool in install.tools.values():
             print()
@@ -33,9 +33,8 @@ async def list_cmd(args):
             print(json.dumps(tool.input_schema, indent=2))
 
 
-async def tool_cmd(args):
+async def tool_cmd(client, args):
     try:
-        client = Client()
         res = client.call(tool=args.name, input=json.loads(args.input))
         for c in res:
             if c.type == "text":
@@ -92,15 +91,13 @@ async def chat_loop(chat):
     return True
 
 
-async def chat_cmd(args):
-    client = Client()
+async def chat_cmd(client, args):
     config = ChatConfig(
         client=client,
         model=args.model,
         base_url=args.url,
         system=args.system,
         format=args.format,
-        debug=args.debug,
     )
     provider = None
     if args.provider == "ollama":
@@ -143,16 +140,23 @@ async def run(args):
     except Exception as e:
         print(f"Warning: Could not setup command history: {str(e)}")
 
-    if args.debug:
-        print(os.environ)
-    await args.func(args)
+    client = Client()
+    if args.log_level != "off":
+        level = logging.getLevelName(args.log_level.upper())
+        client.configure_logging(level=level)
+
+    await args.func(client, args)
 
 
 def main():
     import asyncio
 
     args = argparse.ArgumentParser(prog="mcpx-client")
-    args.add_argument("--debug", action="store_true", help="Enable debug logging")
+    args.add_argument(
+        "--log-level",
+        choices=["off", "critical", "fatal", "warn", "info", "debug", "error"],
+        help="Select log level",
+    )
     args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 

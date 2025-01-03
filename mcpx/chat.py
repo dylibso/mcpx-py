@@ -73,10 +73,6 @@ class ChatConfig:
 
     Typically this can be set to `None`
     """
-    debug: bool = False
-    """
-    Enable debug mode
-    """
 
     max_tokens: int = 1024
     """
@@ -205,6 +201,10 @@ class ChatProvider:
         """
         pass
 
+    @property
+    def _logger(self):
+        return self.config.client.logger
+
     def get_tools(self) -> List[object]:
         """
         Get all tools from the mcp server
@@ -215,8 +215,7 @@ class ChatProvider:
             if t is None:
                 continue
             for tool in t.tools.values():
-                if self.config.debug:
-                    self.print("DEBUG>>", "FOUND TOOL:", tool.name)
+                self._logger.debug("Tool:", tool.name)
                 self.tools.append(self._convert_tool(tool))
         return self.tools
 
@@ -226,8 +225,7 @@ class ChatProvider:
         """
         if isinstance(input, str):
             input = json.loads(input)
-        if self.config.debug:
-            self.print("DEBUG>>", f"Calling tool: {name} with input: {input}")
+        self._logger.debug(f"Calling tool: {name} with input: {input}")
         try:
             res = self.config.client.call(tool=name, input=input)
             for c in res.content:
@@ -303,8 +301,7 @@ class Ollama(ChatProvider):
             messages=self.messages,
             format=self.config.format,
         )
-        if self.config.debug:
-            self.print("DEBUG>>", response)
+        self._logger.debug("Response:", response)
         content = response.message.content
         if content is not None and content != "":
             self.append_message(content, role="assistant")
@@ -352,8 +349,7 @@ class OpenAI(ChatProvider):
             max_completion_tokens=self.config.max_tokens,
         )
         for response in r.choices:
-            if self.config.debug:
-                self.print("DEBUG>>", response)
+            self._logger.debug("Response", response)
             content = response.message.content
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
@@ -391,8 +387,7 @@ class Gemini(OpenAI):
             max_tokens=self.config.max_tokens,
         )
         for response in r.choices:
-            if self.config.debug:
-                self.print("DEBUG>>", response)
+            self._logger.debug(response)
             if response.message is None:
                 continue
             content = response.message.content
@@ -451,8 +446,7 @@ class Claude(ChatProvider):
             system=self.config.system,
         )
         for block in res.content:
-            if self.config.debug:
-                self.print("DEBUG>>", block)
+            self._logger.debug(block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
                 async for res in self.call_tool(block.name, block.input):
                     yield res

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterator, Dict, List, Tuple
 from datetime import datetime, timedelta
 import base64
+import logging
 
 import requests
 import extism as ext
@@ -56,7 +57,7 @@ class Tool:
     Input parameter schema
     """
 
-    servlet: 'Servlet'
+    servlet: "Servlet"
     """
     The servlet the tool belongs to
     """
@@ -112,12 +113,12 @@ class Servlet:
         if other is None:
             return False
         return (
-            self.tools == other.tools and
-            self.settings == other.settings and
-            self.content_addr == other.content_addr and
-            self.binding_id == other.binding_id and
-            self.slug == other.slug and
-            self.name == other.name
+            self.tools == other.tools
+            and self.settings == other.settings
+            and self.content_addr == other.content_addr
+            and self.binding_id == other.binding_id
+            and self.slug == other.slug
+            and self.name == other.name
         )
 
 
@@ -240,6 +241,7 @@ def _default_session_id() -> str:
 
     raise Exception("No mcpx session ID found")
 
+
 def _default_update_interval():
     ms = os.environ.get("MCPX_UPDATE_INTERVAL")
     if ms is None:
@@ -263,6 +265,17 @@ class ClientConfig:
     """
     Length of time to wait between checking for new tools
     """
+
+    logger: logging.Logger = logging.getLogger(__name__)
+    """
+    Python logger
+    """
+
+    def configure_logging(self, *args, **kw):
+        """
+        Configure logging using logging.basicConfig
+        """
+        return logging.basicConfig(*args, **kw)
 
 
 class Cache[K, T]:
@@ -315,6 +328,11 @@ class Client:
     mcp.run session ID
     """
 
+    logger: logging.Logger
+    """
+    Python logger
+    """
+
     endpoints: Endpoints
     """
     mcp.run endpoint manager
@@ -334,6 +352,7 @@ class Client:
         self,
         session_id: str = _default_session_id(),
         config: ClientConfig | None = None,
+        log_level: int | None = None,
     ):
         if config is None:
             config = ClientConfig()
@@ -341,6 +360,16 @@ class Client:
         self.endpoints = Endpoints(config.base_url)
         self.install_cache = Cache(config.tool_refresh_time)
         self.plugin_cache = Cache()
+        self.logger = config.logger
+
+        if log_level is not None:
+            self.configure_logging(level=log_level)
+
+    def configure_logging(self, *args, **kw):
+        """
+        Configure logging using logging.basicConfig
+        """
+        return logging.basicConfig(*args, **kw)
 
     def list_installs(self) -> Iterator[Servlet]:
         """
@@ -348,6 +377,7 @@ class Client:
         request each time
         """
         url = self.endpoints.installations
+        self.logger.info("Listing installed mcp.run servlets from {url}")
         res = requests.get(
             url,
             cookies={
@@ -355,6 +385,7 @@ class Client:
             },
         )
         data = res.json()
+        self.logger.info("Got response from {url}:", data)
         for install in data["installs"]:
             binding = install["binding"]
             tools = install["servlet"]["meta"]["schema"]
@@ -387,6 +418,7 @@ class Client:
         the cache timeout hasn't been reached
         """
         if self.install_cache.needs_refresh():
+            self.logger.info("Cache expired, fetching installs")
             visited = set()
             for install in self.list_installs():
                 if install != self.install_cache.get(install.name):
@@ -398,7 +430,7 @@ class Client:
                     self.install_cache.remove(install_name)
                     self.plugin_cache.remove(install_name)
         return self.install_cache.items
-    
+
     @property
     def tools(self) -> Dict[str, Tool]:
         """
@@ -439,6 +471,7 @@ class Client:
         if cache_name in self.plugin_cache.items:
             return self.plugin_cache.items[cache_name]
         if install.content is None:
+            self.logger.info("Fetching servlet Wasm for {install.name}", install.content_addr) 
             res = requests.get(
                 self.endpoints.content(install.content_addr),
                 cookies={
@@ -471,7 +504,7 @@ class Client:
         """
         Call a tool with the given input
         """
-        if isinstance(tool, str):\
+        if isinstance(tool, str):
             tool = self.tool(tool)
         plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions)
         return plugin.call(tool=tool.name, input=input)
