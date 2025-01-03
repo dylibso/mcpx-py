@@ -2,10 +2,11 @@ from dataclasses import dataclass
 import os
 import json
 from pathlib import Path
-from typing import Iterator, Dict, List
+from typing import Iterator, Dict, List, Optional
 from datetime import datetime, timedelta
 import base64
 import logging
+import urllib
 
 import requests
 import extism as ext
@@ -28,6 +29,13 @@ class Endpoints:
         List installations
         """
         return f"{self.base}/api/profiles/~/default/installations"
+
+    def search(self, query):
+        """
+        Search servlets
+        """
+        query = urllib.parse.quote_plus(query)
+        return f"{self.base}/api/servlets?q={query}"
 
     def content(self, addr: str):
         """
@@ -57,7 +65,7 @@ class Tool:
     Input parameter schema
     """
 
-    servlet: "Servlet"
+    servlet: Optional["Servlet"] = None
     """
     The servlet the tool belongs to
     """
@@ -397,7 +405,7 @@ class Client:
                 installed=True,
                 binding_id=binding["id"],
                 content_addr=binding["contentAddress"],
-                name=install["name"],
+                name=install.get("name", ""),
                 slug=install["servlet"]["slug"],
                 settings=install["settings"],
                 tools={},
@@ -453,6 +461,43 @@ class Client:
                     return tool
         return None
 
+    def search(self, query: str) -> List[dict]:
+        url = self.endpoints.search(query)
+        res = requests.get(
+            url,
+            cookies={
+                "sessionId": self.session_id,
+            },
+        )
+        data = res.json()
+        return data
+        # servlets = []
+        # for servlet in data:
+        #     tools = servlet["meta"]
+        #     if "schema" in tools:
+        #         tools = tools["schema"]
+        #     if "tools" in tools:
+        #         tools = tools["tools"]
+        #     else:
+        #         tools = [tools]
+        #     servlet = SearchResult(
+        #         slug=servlet["slug"],
+        #         settings=servlet.get("requirements", {}).get("v0", {}),
+        #         tools={},
+        #         installation_count=servlet["installation_count"]
+        #     )
+        #     for tool in tools:
+        #         if "name" not in tool or "description" not in tool or "inputSchema" not in tool:
+        #             continue
+        #         servlet.tools[tool["name"]] = Tool(
+        #             name=tool["name"],
+        #             description=tool["description"],
+        #             input_schema=tool["inputSchema"],
+        #             servlet=servlet,
+        #         )
+        #     servlets.append(servlet)
+        # return servlets
+
     def plugin(
         self,
         install: Servlet,
@@ -463,6 +508,8 @@ class Client:
         """
         Instantiate an installed servlet, turning it into an InstalledPlugin
         """
+        if not install.installed:
+            raise Exception(f"Servlet {install.name} must be installed before use")
         cache_name = f"{install.name}-{wasi}"
         if functions is not None:
             for func in functions:

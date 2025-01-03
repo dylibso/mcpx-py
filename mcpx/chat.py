@@ -10,6 +10,7 @@ import tempfile
 import os
 
 from .client import Client, Tool
+from .import builtin_tools
 
 
 SYSTEM_PROMPT = """
@@ -206,12 +207,15 @@ class ChatProvider:
         """
         pass
 
+    def _builtin_tools(self) -> List[object]:
+        return [builtin_tools.search]
+
     def get_tools(self) -> List[object]:
         """
         Get all tools from the mcp server
         """
         tools = self.config.client.installs
-        self.tools = []
+        self.tools = [self._convert_tool(t) for t in self._builtin_tools()]
         for name, t in tools.items():
             if t is None:
                 continue
@@ -229,6 +233,19 @@ class ChatProvider:
             input = json.loads(input)
         self.logger.info(f"Calling tool: {name} with input: {input}")
         try:
+            # Handle builtin tools
+            if name in ["mcp_run_search_servlets"]:
+                res = self.config.client.search(input["q"])
+                c = json.dumps(res)
+                yield ChatResponse(
+                    role="tool",
+                    content=c,
+                    tool=ToolCall(name=name, input=input),
+                )
+                async for res in self.chat(c, tool=name):
+                    yield res
+                return
+
             res = self.config.client.call(tool=name, input=input, **kw)
             for c in res.content:
                 if c.type == "text":

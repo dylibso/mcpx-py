@@ -74,7 +74,7 @@ async def chat_loop(chat):
                 tools = chat.provider.get_tools()
                 print("\nAvailable tools:")
                 for tool in tools:
-                    print(f"- {tool.name}")
+                    print(f"- {tool['name']}")
                 return True
             elif msg.startswith("!sh "):
                 os.system(msg[4:])
