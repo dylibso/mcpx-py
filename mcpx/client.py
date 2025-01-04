@@ -239,11 +239,11 @@ def _default_session_id() -> str:
         return _parse_mcpx_config(dot_config)
 
     # Try Windows paths
-    windows_config = os.path.expandvars("%LOCALAPPDATA%/mcpx/config.json")
+    windows_config = Path(os.path.expandvars("%LOCALAPPDATA%/mcpx/config.json"))
     if windows_config.exists():
         return _parse_mcpx_config(windows_config)
 
-    windows_config = os.path.expandvars("%APPDATA%/mcpx/config.json")
+    windows_config = Path(os.path.expandvars("%APPDATA%/mcpx/config.json"))
     if windows_config.exists():
         return _parse_mcpx_config(windows_config)
 
