@@ -358,10 +358,12 @@ class Client:
 
     def __init__(
         self,
-        session_id: str = _default_session_id(),
+        session_id: str | None = None,
         config: ClientConfig | None = None,
         log_level: int | None = None,
     ):
+        if session_id is None:
+            session_id =  _default_session_id()
         if config is None:
             config = ClientConfig()
         self.session_id = session_id
