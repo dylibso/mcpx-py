@@ -115,14 +115,20 @@ async def chat_cmd(client, args):
     )
     provider = None
     if args.provider == "ollama":
-        provider = Ollama
+        provider = Ollama(config)
     elif args.provider == "claude":
-        provider = Claude
+        provider = Claude(config)
     elif args.provider == "openai":
-        provider = OpenAI
+        provider = OpenAI(config)
     elif args.provider == "gemini":
-        provider = Gemini
-    chat = Chat(provider, config)
+        provider = Gemini(config)
+
+    if args.provider == "ollama" and args.pull:
+        print(f">> Pulling {config.model}")
+        provider.provider_client.pull(model=config.model, stream=False)
+
+    chat = Chat(provider)
+
     while True:
         ok = await chat_loop(chat)
         if not ok:
@@ -199,6 +205,9 @@ def main():
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
     chat_parser.add_argument("--format", default="", help="Output format")
+    chat_parser.add_argument(
+        "--pull", action="store_true", help="Pull the model before running, Ollama only"
+    )
 
     # Run
     asyncio.run(run(args.parse_args()))

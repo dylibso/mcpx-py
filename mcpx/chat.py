@@ -10,7 +10,7 @@ import tempfile
 import os
 
 from .client import Client, Tool
-from .import builtin_tools
+from . import builtin_tools
 
 
 SYSTEM_PROMPT = """
@@ -157,6 +157,11 @@ class ChatProvider:
     Chat configuration options
     """
 
+    provider_client: object | None
+    """
+    API provider client
+    """
+
     def __init__(self, config: ChatConfig | None = None):
         self.messages = []
         self.tools = []
@@ -165,7 +170,15 @@ class ChatProvider:
             self.config.model = self._default_model()
         if self.config.provider_client is not None:
             self.provider_client = self.config.provider_client
+        else:
+            self.provider_client = self._default_provider_client()
         self.logger = config.client.logger.getChild("chat")
+
+    def _default_provider_client(self):
+        """
+        Returns the default API provider client
+        """
+        pass
 
     @staticmethod
     def _default_model() -> str:
@@ -208,9 +221,7 @@ class ChatProvider:
         pass
 
     def _builtin_tools(self) -> List[object]:
-        return [
-            self._convert_tool(builtin_tools.SEARCH)
-        ]
+        return [self._convert_tool(builtin_tools.SEARCH)]
 
     def get_tools(self) -> List[object]:
         """
@@ -297,6 +308,9 @@ class Ollama(ChatProvider):
     def _default_model() -> str:
         return "qwen2.5"
 
+    def _default_provider_client(self):
+        return OllamaClient(host=self.config.base_url)
+
     def _convert_tool(self, tool):
         return {
             "type": "function",
@@ -310,8 +324,6 @@ class Ollama(ChatProvider):
     async def chat(
         self, msg: str, tool: Optional[str] = None
     ) -> Iterator[ChatResponse]:
-        if not hasattr(self, "provider_client"):
-            self.provider_client = OllamaClient(host=self.config.base_url)
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
         self.append_message(msg, role="user" if tool is None else "tool", tool=tool)
@@ -353,13 +365,12 @@ class OpenAI(ChatProvider):
     def _default_model() -> str:
         return "gpt-4o"
 
+    def _default_provider_client(self):
+        return OpenAIClient(base_url=self.config.base_url, api_key=self.config.api_key)
+
     async def chat(
         self, msg: str, tool: Optional[str] = None
     ) -> Iterator[ChatResponse]:
-        if not hasattr(self, "provider_client"):
-            self.provider_client = OpenAIClient(
-                base_url=self.config.base_url, api_key=self.config.api_key
-            )
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
         self.append_message(msg, tool=tool)
@@ -390,14 +401,15 @@ class Gemini(OpenAI):
     def _default_model() -> str:
         return "gemini-1.5-flash"
 
+    def _default_provider_client(self):
+        return OpenAIClient(
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            api_key=os.environ.get("GEMINI_API_KEY", self.config.api_key),
+        )
+
     async def chat(
         self, msg: str, tool: Optional[str] = None
     ) -> Iterator[ChatResponse]:
-        if not hasattr(self, "provider_client"):
-            self.provider_client = OpenAIClient(
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-                api_key=os.environ.get("GEMINI_API_KEY", self.config.api_key),
-            )
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
         self.append_message(msg, tool=tool)
@@ -451,13 +463,14 @@ class Claude(ChatProvider):
     def _default_model():
         return "claude-3-5-sonnet-latest"
 
+    def _default_provider_client(self):
+        return AsyncAnthropic(
+            base_url=self.config.base_url, api_key=self.config.api_key
+        )
+
     async def chat(
         self, msg: str, tool: Optional[str] = None
     ) -> Iterator[ChatResponse]:
-        if not hasattr(self, "provider_client"):
-            self.provider_client = AsyncAnthropic(
-                base_url=self.config.base_url, api_key=self.config.api_key
-            )
         self.append_message(msg, tool=tool)
         res = await self.provider_client.messages.create(
             max_tokens=self.config.max_tokens,
@@ -476,6 +489,17 @@ class Claude(ChatProvider):
                 yield ChatResponse(role="assistant", content=block.text)
 
 
+def _detect_provider() -> ChatProvider:
+    if "ANTHROPIC_API_KEY" in os.environ:
+        return Claude
+    elif "OPENAI_API_KEY" in os.environ:
+        return OpenAI
+    elif "GEMINI_API_KEY" in os.environ:
+        return Gemini
+    else:
+        return Ollama
+
+
 class Chat:
     """
     A unified interface for chatting with ChatProviders
@@ -484,7 +508,10 @@ class Chat:
     provider: ChatProvider
 
     def __init__(
-        self, provider: Callable[..., ChatProvider] | ChatProvider = Claude, *args, **kw
+        self,
+        provider: Callable[..., ChatProvider] | ChatProvider = _detect_provider(),
+        *args,
+        **kw,
     ):
         if isinstance(provider, ChatProvider):
             self.provider = provider

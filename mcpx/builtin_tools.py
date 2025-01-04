@@ -1,5 +1,6 @@
 from .client import Tool
-SEARCH= Tool(
+
+SEARCH = Tool(
     name="mcp_run_search_servlets",
     description="""
     Search for tools that might help solve the user's problem. Use single-word searches first (like "image" or "pdf"). If no results match, try one more related word. Never combine multiple terms in the first search.
