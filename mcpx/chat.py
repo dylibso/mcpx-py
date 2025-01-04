@@ -34,7 +34,7 @@ class ChatConfig:
     Stores configuration and session for chats
     """
 
-    client: Client = Client()
+    client: Client | None = None
     """
     mcp.run client
     """
@@ -166,6 +166,8 @@ class ChatProvider:
         self.messages = []
         self.tools = []
         self.config = config or ChatConfig()
+        if self.config.client is None:
+            self.config.client = Client()
         if self.config.model is None:
             self.config.model = self._default_model()
         if self.config.provider_client is not None:
