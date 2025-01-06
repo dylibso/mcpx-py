@@ -25,7 +25,24 @@ A Python library and command line client for https://www.mcp.run. This tool enab
 ## Dependencies
 
 - `uv`
+- `npm`
 - `ollama` (optional)
+
+## mcp.run Setup
+
+You will need to get an mcp.run session ID:
+
+```bash
+$ npx --yes -p @dylibso/mcpx gen-session 
+Login successful!
+Session: kabA7w6qH58H7kKOQ5su4v3bX_CeFn4k.Y4l/s/9dQwkjv9r8t/xZFjsn2fkLzf+tkve89P1vKhQ
+```
+
+Then set the `MXPC_SESSION_ID` environment variable:
+
+```
+$ export MCPX_SESSION_ID=kabA7w6qH58H7kKOQ5su4v3bX_CeFn4k.Y4l/s/9dQwkjv9r8t/xZFjsn2fkLzf+tkve89P1vKhQ
+```
 
 ## Python Usage
 
@@ -49,9 +66,7 @@ $ pip install git+https://github.com/dylibso/mcpx-py
 from mcpx import Client   # Import the mcp.run client
 
 client = Client()         # Create the client, this will check the
-                          # default location for the mcpx config or
-                          # the `MCPX_SESSION_ID` env var can be used
-                          # to specify a valid mcpx session id
+                          # `MCPX_SESSION_ID` environment variable
 
 # Call a tool with the given input
 results = client.call("eval-js", {"code": "'Hello, world!'"})
