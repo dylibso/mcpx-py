@@ -223,14 +223,9 @@ def _parse_mcpx_config(filename: str | Path) -> str | None:
 
 def _default_session_id() -> str:
     # Allow session id to be specified using MCPX_SESSION_ID
-    id = os.environ.get("MCPX_SESSION_ID")
+    id = os.environ.get("MCP_RUN_SESSION_ID", os.environ.get("MCPX_SESSION_ID"))
     if id is not None:
         return id
-
-    # Allow config file to be specified using MCPX_CONFIG
-    path = os.environ.get("MCPX_CONFIG")
-    if path is not None:
-        return _parse_mcpx_config(path)
 
     # Try ~/.config/mcpx/config.json for Linux/macOS
     user = Path(os.path.expanduser("~"))
@@ -264,7 +259,7 @@ class ClientConfig:
     Configures an mcp.run Client
     """
 
-    base_url: str = os.environ.get("MCPX_RUN_ORIGIN", "https://www.mcp.run")
+    base_url: str = os.environ.get("MCP_RUN_ORIGIN", "https://www.mcp.run")
     """
     mcp.run base URL
     """
