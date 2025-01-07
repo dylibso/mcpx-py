@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Optional, List, Iterator, Callable
 import tempfile
 import os
+import asyncio
 
 from .client import Client, Tool
 from . import builtin_tools
@@ -173,10 +174,11 @@ class ChatProvider:
         if self.config.provider_client is not None:
             self.provider_client = self.config.provider_client
         else:
-            self.provider_client = self._default_provider_client()
+            self.provider_client = self._default_provider_client(self.config)
         self.logger = config.client.logger.getChild("chat")
 
-    def _default_provider_client(self):
+    @staticmethod
+    def _default_provider_client(config):
         """
         Returns the default API provider client
         """
@@ -189,7 +191,8 @@ class ChatProvider:
         """
         return ""
 
-    def _convert_tool(self, tool: Tool):
+    @staticmethod
+    def _convert_tool(tool: Tool):
         """
         Convert a tool from Tool to the expected format
         for the given provider
@@ -221,6 +224,14 @@ class ChatProvider:
         of a tool call
         """
         pass
+
+    def chat_sync(self, *args, **kw) -> Iterator[ChatResponse]:
+        """
+        Handle chat message, if `tool` is set then the message is the result
+        of a tool call
+        """
+        for res in asyncio.run(self.chat(*args, **kw)):
+            yield res
 
     def _builtin_tools(self) -> List[object]:
         return [self._convert_tool(builtin_tools.SEARCH)]
@@ -310,10 +321,8 @@ class Ollama(ChatProvider):
     def _default_model() -> str:
         return "qwen2.5"
 
-    def _default_provider_client(self):
-        return OllamaClient(host=self.config.base_url)
-
-    def _convert_tool(self, tool):
+    @staticmethod
+    def _convert_tool(tool):
         return {
             "type": "function",
             "function": {
@@ -322,6 +331,10 @@ class Ollama(ChatProvider):
                 "parameters": tool.input_schema,
             },
         }
+
+    @staticmethod
+    def _default_provider_client(config):
+        return OllamaClient(host=config.base_url)
 
     async def chat(
         self, msg: str, tool: Optional[str] = None
@@ -353,7 +366,8 @@ class OpenAI(ChatProvider):
     Chat using the OpenAI API
     """
 
-    def _convert_tool(self, tool):
+    @staticmethod
+    def _convert_tool(tool):
         return {
             "type": "function",
             "function": {
@@ -367,8 +381,9 @@ class OpenAI(ChatProvider):
     def _default_model() -> str:
         return "gpt-4o"
 
-    def _default_provider_client(self):
-        return OpenAIClient(base_url=self.config.base_url, api_key=self.config.api_key)
+    @staticmethod
+    def _default_provider_client(config):
+        return OpenAIClient(base_url=config.base_url, api_key=config.api_key)
 
     async def chat(
         self, msg: str, tool: Optional[str] = None
@@ -403,10 +418,11 @@ class Gemini(OpenAI):
     def _default_model() -> str:
         return "gemini-1.5-flash"
 
-    def _default_provider_client(self):
+    @staticmethod
+    def _default_provider_client(config):
         return OpenAIClient(
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            api_key=os.environ.get("GEMINI_API_KEY", self.config.api_key),
+            api_key=os.environ.get("GEMINI_API_KEY", config.api_key),
         )
 
     async def chat(
@@ -453,8 +469,8 @@ class Claude(ChatProvider):
     """
     Chat using the Claude API
     """
-
-    def _convert_tool(self, tool):
+    @staticmethod
+    def _convert_tool(tool):
         return {
             "name": tool.name,
             "description": tool.description,
@@ -465,9 +481,10 @@ class Claude(ChatProvider):
     def _default_model():
         return "claude-3-5-sonnet-latest"
 
-    def _default_provider_client(self):
+    @staticmethod
+    def _default_provider_client(config):
         return AsyncAnthropic(
-            base_url=self.config.base_url, api_key=self.config.api_key
+            base_url=config.base_url, api_key=config.api_key
         )
 
     async def chat(
@@ -546,4 +563,11 @@ class Chat:
         """
         self.provider.get_tools()
         async for res in self.provider.chat(msg):
+            yield res
+
+    def send_message_sync(self, msg) -> Iterator[ChatResponse]:
+        """
+        Send a chat message to the LLM, returning an iterator of ChatResponse
+        """
+        for res in asyncio.run(self.send_message(msg)):
             yield res
