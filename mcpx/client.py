@@ -159,6 +159,13 @@ class Content:
         return self.data.decode()
 
     @property
+    def json(self):
+        """
+        Get the result data as json
+        """
+        return json.loads(self.text)
+
+    @property
     def data(self):
         """
         Get the result as bytes
