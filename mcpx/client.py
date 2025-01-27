@@ -27,6 +27,8 @@ class Endpoints:
         """
         List installations
         """
+        if "/" in profile:
+            return f"{self.base}/api/profiles/{profile}/installations"
         return f"{self.base}/api/profiles/~/{profile}/installations"
 
     def search(self, query):
@@ -316,14 +318,17 @@ class Cache[K, T]:
 
     def clear(self):
         self.items = {}
-        self.last_update = datetime.now()
+        self.last_update = datetime.utcnow()
+
+    def set_last_update(self):
+        self.last_update = datetime.utcnow()
 
     def needs_refresh(self) -> bool:
         if self.duration is None:
             return False
         if self.last_update is None:
             return True
-        now = datetime.now()
+        now = datetime.utcnow()
         return now - self.last_update >= self.duration
 
 
@@ -369,7 +374,7 @@ class Client:
         log_level: int | None = None,
     ):
         if session_id is None:
-            session_id =  _default_session_id()
+            session_id = _default_session_id()
         if config is None:
             config = ClientConfig()
         self.session_id = session_id
@@ -395,12 +400,24 @@ class Client:
         """
         url = self.endpoints.installations(self.config.profile)
         self.logger.info(f"Listing installed mcp.run servlets from {url}")
+        headers = {}
+        if self.install_cache.last_update is not None:
+            modified = self.install_cache.last_update.strftime(
+                "%a, %d %b %Y %H:%M:%S GMT"
+            )
+            headers["if-modified-since"] = modified
         res = requests.get(
             url,
+            headers=headers,
             cookies={
                 "sessionId": self.session_id,
             },
         )
+        res.raise_for_status()
+        if res.status_code == 301:
+            for v in self.install_cache.items.values():
+                yield v
+            return
         data = res.json()
         self.logger.debug(f"Got installed servlets from {url}: {data}")
         for install in data["installs"]:
@@ -446,6 +463,7 @@ class Client:
                 if install_name not in visited:
                     self.install_cache.remove(install_name)
                     self.plugin_cache.remove(install_name)
+            self.install_cache.set_last_update()
         return self.install_cache.items
 
     @property
@@ -480,32 +498,6 @@ class Client:
         )
         data = res.json()
         return data
-        # servlets = []
-        # for servlet in data:
-        #     tools = servlet["meta"]
-        #     if "schema" in tools:
-        #         tools = tools["schema"]
-        #     if "tools" in tools:
-        #         tools = tools["tools"]
-        #     else:
-        #         tools = [tools]
-        #     servlet = SearchResult(
-        #         slug=servlet["slug"],
-        #         settings=servlet.get("requirements", {}).get("v0", {}),
-        #         tools={},
-        #         installation_count=servlet["installation_count"]
-        #     )
-        #     for tool in tools:
-        #         if "name" not in tool or "description" not in tool or "inputSchema" not in tool:
-        #             continue
-        #         servlet.tools[tool["name"]] = Tool(
-        #             name=tool["name"],
-        #             description=tool["description"],
-        #             input_schema=tool["inputSchema"],
-        #             servlet=servlet,
-        #         )
-        #     servlets.append(servlet)
-        # return servlets
 
     def plugin(
         self,
