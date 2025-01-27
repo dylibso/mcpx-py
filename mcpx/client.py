@@ -23,12 +23,11 @@ class Endpoints:
     mcp.run base URL
     """
 
-    @property
-    def installations(self):
+    def installations(self, profile):
         """
         List installations
         """
-        return f"{self.base}/api/profiles/~/default/installations"
+        return f"{self.base}/api/profiles/~/{profile}/installations"
 
     def search(self, query):
         """
@@ -281,6 +280,11 @@ class ClientConfig:
     Python logger
     """
 
+    profile: str = "default"
+    """
+    mcp.run profile name
+    """
+
     def configure_logging(self, *args, **kw):
         """
         Configure logging using logging.basicConfig
@@ -373,6 +377,7 @@ class Client:
         self.install_cache = Cache(config.tool_refresh_time)
         self.plugin_cache = Cache()
         self.logger = config.logger
+        self.config = config
 
         if log_level is not None:
             self.configure_logging(level=log_level)
@@ -388,7 +393,7 @@ class Client:
         List all installed servlets, this will make an HTTP
         request each time
         """
-        url = self.endpoints.installations
+        url = self.endpoints.installations(self.config.profile)
         self.logger.info(f"Listing installed mcp.run servlets from {url}")
         res = requests.get(
             url,
