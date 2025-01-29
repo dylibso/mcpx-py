@@ -24,3 +24,8 @@ dev-dependencies = [
 
 [project.scripts]
 mcpx-client = "mcpx.__main__:main"
+
+# Workaround for uv/setuptools version mismatch
+# https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
+[tool.setuptools]
+license-files = []
