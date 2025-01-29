@@ -318,17 +318,17 @@ class Cache[K, T]:
 
     def clear(self):
         self.items = {}
-        self.last_update = datetime.utcnow()
+        self.last_update = datetime.now()
 
     def set_last_update(self):
-        self.last_update = datetime.utcnow()
+        self.last_update = datetime.now()
 
     def needs_refresh(self) -> bool:
         if self.duration is None:
             return False
         if self.last_update is None:
             return True
-        now = datetime.utcnow()
+        now = datetime.now()
         return now - self.last_update >= self.duration
 
 
