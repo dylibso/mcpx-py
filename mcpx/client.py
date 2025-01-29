@@ -398,6 +398,13 @@ class Client:
         """
         return logging.basicConfig(*args, **kw)
 
+    def set_profile(self, profile: str):
+        """
+        Select a profile
+        """
+        self.config.profile = profile
+        self.last_installations_request = None
+
     def list_installs(self) -> Iterator[Servlet]:
         """
         List all installed servlets, this will make an HTTP
