@@ -30,10 +30,15 @@ A Python library and command line client for https://www.mcp.run. This tool enab
 
 ## mcp.run Setup
 
-You will need to get an mcp.run session ID:
+You will need to get an mcp.run session ID by running:
 
 ```bash
-$ npx --yes -p @dylibso/mcpx gen-session 
+npx --yes -p @dylibso/mcpx gen-session
+```
+
+which should output something like:
+
+```
 Login successful!
 Session: kabA7w6qH58H7kKOQ5su4v3bX_CeFn4k.Y4l/s/9dQwkjv9r8t/xZFjsn2fkLzf+tkve89P1vKhQ
 ```
@@ -51,13 +56,13 @@ $ export MCP_RUN_SESSION_ID=kabA7w6qH58H7kKOQ5su4v3bX_CeFn4k.Y4l/s/9dQwkjv9r8t/x
 Using `uv`:
 
 ```bash
-$ uv add mcpx-py
+uv add mcpx-py
 ```
 
 Or `pip`:
 
 ```bash
-$ pip install mcpx-py
+pip install mcpx-py
 ```
 
 ### Example code
@@ -81,6 +86,12 @@ More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py
 ## Command Line Usage
 
 ### Installation
+
+```sh
+uv tool install mcpx-py
+```
+
+From git:
 
 ```sh
 uv tool install git+https://github.com/dylibso/mcpx-py
