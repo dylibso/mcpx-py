@@ -517,7 +517,7 @@ class Client:
             install: The servlet to instantiate
             wasi: Whether to enable WASI
             functions: Optional list of Extism functions to include
-            wasm: Optional list of additional WASM modules in format [{"data": bytes}]
+            wasm: Optional list of additional WASM modules
 
         Returns:
             An InstalledPlugin instance
@@ -578,7 +578,7 @@ class Client:
             input: Dictionary of input parameters for the tool
             wasi: Whether to enable WASI
             functions: Optional list of Extism functions to include
-            wasm: Optional list of additional WASM modules in format [{"data": bytes}]
+            wasm: Optional list of additional WASM modules
 
         Returns:
             CallResult containing the tool's output

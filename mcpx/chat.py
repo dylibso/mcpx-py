@@ -469,6 +469,7 @@ class Claude(ChatProvider):
     """
     Chat using the Claude API
     """
+
     @staticmethod
     def _convert_tool(tool):
         return {
@@ -483,9 +484,7 @@ class Claude(ChatProvider):
 
     @staticmethod
     def _default_provider_client(config):
-        return AsyncAnthropic(
-            base_url=config.base_url, api_key=config.api_key
-        )
+        return AsyncAnthropic(base_url=config.base_url, api_key=config.api_key)
 
     async def chat(
         self, msg: str, tool: Optional[str] = None
