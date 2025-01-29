@@ -311,9 +311,9 @@ class Cache[K, T]:
         self.items.pop(key, None)
 
     def get(self, key: K) -> T | None:
-        self.items.get(key)
+        return self.items.get(key)
 
-    def __in__(self, key: K) -> bool:
+    def __contains__(self, key: K) -> bool:
         return key in self.items
 
     def clear(self):
@@ -508,10 +508,19 @@ class Client:
         install: Servlet,
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
-        wasm: List[object] | None = None,
+        wasm: List[Dict[str, bytes]] | None = None,
     ) -> InstalledPlugin:
         """
         Instantiate an installed servlet, turning it into an InstalledPlugin
+
+        Args:
+            install: The servlet to instantiate
+            wasi: Whether to enable WASI
+            functions: Optional list of Extism functions to include
+            wasm: Optional list of additional WASM modules in format [{"data": bytes}]
+
+        Returns:
+            An InstalledPlugin instance
         """
         if not install.installed:
             raise Exception(f"Servlet {install.name} must be installed before use")
@@ -519,10 +528,11 @@ class Client:
         if functions is not None:
             for func in functions:
                 cache_name += "-"
-                cache_name += hash(func.pointer)
+                cache_name += str(hash(func.pointer))
         cache_name = str(hash(cache_name))
-        if cache_name in self.plugin_cache.items:
-            return self.plugin_cache.items[cache_name]
+        cached = self.plugin_cache.get(cache_name)
+        if cached is not None:
+            return cached
         if install.content is None:
             self.logger.info(
                 f"Fetching servlet Wasm for {install.name}: {install.content_addr}"
@@ -558,12 +568,25 @@ class Client:
         input: dict = {},
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
-        wasm: List[object] | None = None,
+        wasm: List[Dict[str, bytes]] | None = None,
     ) -> CallResult:
         """
         Call a tool with the given input
+
+        Args:
+            tool: Name of the tool or Tool instance to call
+            input: Dictionary of input parameters for the tool
+            wasi: Whether to enable WASI
+            functions: Optional list of Extism functions to include
+            wasm: Optional list of additional WASM modules in format [{"data": bytes}]
+
+        Returns:
+            CallResult containing the tool's output
         """
         if isinstance(tool, str):
-            tool = self.tool(tool)
+            found_tool = self.tool(tool)
+            if found_tool is None:
+                raise ValueError(f"Tool '{tool}' not found")
+            tool = found_tool
         plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions, wasm=wasm)
         return plugin.call(tool=tool.name, input=input)
