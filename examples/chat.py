@@ -1,5 +1,5 @@
 import asyncio
-from mcpx import Chat, Claude
+from mcpx_py import Chat, Claude
 
 
 # Using ChatProvider.chat requires async, so we'll wrap this in an

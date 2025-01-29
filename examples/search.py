@@ -1,4 +1,4 @@
-from mcpx import Client  # Import the mcp.run client
+from mcpx_py import Client  # Import the mcp.run client
 
 client = Client()  # Create the client, this will check the
 # default location for the mcpx config or
