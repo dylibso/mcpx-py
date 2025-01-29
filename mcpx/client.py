@@ -23,12 +23,13 @@ class Endpoints:
     mcp.run base URL
     """
 
-    @property
-    def installations(self):
+    def installations(self, profile):
         """
         List installations
         """
-        return f"{self.base}/api/profiles/~/default/installations"
+        if "/" in profile:
+            return f"{self.base}/api/profiles/{profile}/installations"
+        return f"{self.base}/api/profiles/~/{profile}/installations"
 
     def search(self, query):
         """
@@ -281,6 +282,11 @@ class ClientConfig:
     Python logger
     """
 
+    profile: str = "default"
+    """
+    mcp.run profile name
+    """
+
     def configure_logging(self, *args, **kw):
         """
         Configure logging using logging.basicConfig
@@ -305,13 +311,16 @@ class Cache[K, T]:
         self.items.pop(key, None)
 
     def get(self, key: K) -> T | None:
-        self.items.get(key)
+        return self.items.get(key)
 
-    def __in__(self, key: K) -> bool:
+    def __contains__(self, key: K) -> bool:
         return key in self.items
 
     def clear(self):
         self.items = {}
+        self.last_update = datetime.now()
+
+    def set_last_update(self):
         self.last_update = datetime.now()
 
     def needs_refresh(self) -> bool:
@@ -358,6 +367,11 @@ class Client:
     Cache of InstalledPlugins
     """
 
+    last_installations_request: str | None = None
+    """
+    Date header from last installations request
+    """
+
     def __init__(
         self,
         session_id: str | None = None,
@@ -365,7 +379,7 @@ class Client:
         log_level: int | None = None,
     ):
         if session_id is None:
-            session_id =  _default_session_id()
+            session_id = _default_session_id()
         if config is None:
             config = ClientConfig()
         self.session_id = session_id
@@ -373,6 +387,7 @@ class Client:
         self.install_cache = Cache(config.tool_refresh_time)
         self.plugin_cache = Cache()
         self.logger = config.logger
+        self.config = config
 
         if log_level is not None:
             self.configure_logging(level=log_level)
@@ -388,14 +403,25 @@ class Client:
         List all installed servlets, this will make an HTTP
         request each time
         """
-        url = self.endpoints.installations
+        url = self.endpoints.installations(self.config.profile)
         self.logger.info(f"Listing installed mcp.run servlets from {url}")
+        headers = {}
+        if self.last_installations_request is not None:
+            headers["if-modified-since"] = self.last_installations_request
         res = requests.get(
             url,
+            headers=headers,
             cookies={
                 "sessionId": self.session_id,
             },
         )
+        res.raise_for_status()
+        if res.status_code == 301:
+            self.logger.debug(f"No changes since {self.last_installations_request}")
+            for v in self.install_cache.items.values():
+                yield v
+            return
+        self.last_installations_request = res.headers.get("Date")
         data = res.json()
         self.logger.debug(f"Got installed servlets from {url}: {data}")
         for install in data["installs"]:
@@ -441,6 +467,7 @@ class Client:
                 if install_name not in visited:
                     self.install_cache.remove(install_name)
                     self.plugin_cache.remove(install_name)
+            self.install_cache.set_last_update()
         return self.install_cache.items
 
     @property
@@ -475,42 +502,25 @@ class Client:
         )
         data = res.json()
         return data
-        # servlets = []
-        # for servlet in data:
-        #     tools = servlet["meta"]
-        #     if "schema" in tools:
-        #         tools = tools["schema"]
-        #     if "tools" in tools:
-        #         tools = tools["tools"]
-        #     else:
-        #         tools = [tools]
-        #     servlet = SearchResult(
-        #         slug=servlet["slug"],
-        #         settings=servlet.get("requirements", {}).get("v0", {}),
-        #         tools={},
-        #         installation_count=servlet["installation_count"]
-        #     )
-        #     for tool in tools:
-        #         if "name" not in tool or "description" not in tool or "inputSchema" not in tool:
-        #             continue
-        #         servlet.tools[tool["name"]] = Tool(
-        #             name=tool["name"],
-        #             description=tool["description"],
-        #             input_schema=tool["inputSchema"],
-        #             servlet=servlet,
-        #         )
-        #     servlets.append(servlet)
-        # return servlets
 
     def plugin(
         self,
         install: Servlet,
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
-        wasm: List[object] | None = None,
+        wasm: List[Dict[str, bytes]] | None = None,
     ) -> InstalledPlugin:
         """
         Instantiate an installed servlet, turning it into an InstalledPlugin
+
+        Args:
+            install: The servlet to instantiate
+            wasi: Whether to enable WASI
+            functions: Optional list of Extism functions to include
+            wasm: Optional list of additional WASM modules
+
+        Returns:
+            An InstalledPlugin instance
         """
         if not install.installed:
             raise Exception(f"Servlet {install.name} must be installed before use")
@@ -518,10 +528,11 @@ class Client:
         if functions is not None:
             for func in functions:
                 cache_name += "-"
-                cache_name += hash(func.pointer)
+                cache_name += str(hash(func.pointer))
         cache_name = str(hash(cache_name))
-        if cache_name in self.plugin_cache.items:
-            return self.plugin_cache.items[cache_name]
+        cached = self.plugin_cache.get(cache_name)
+        if cached is not None:
+            return cached
         if install.content is None:
             self.logger.info(
                 f"Fetching servlet Wasm for {install.name}: {install.content_addr}"
@@ -557,12 +568,25 @@ class Client:
         input: dict = {},
         wasi: bool = True,
         functions: List[ext.Function] | None = None,
-        wasm: List[object] | None = None,
+        wasm: List[Dict[str, bytes]] | None = None,
     ) -> CallResult:
         """
         Call a tool with the given input
+
+        Args:
+            tool: Name of the tool or Tool instance to call
+            input: Dictionary of input parameters for the tool
+            wasi: Whether to enable WASI
+            functions: Optional list of Extism functions to include
+            wasm: Optional list of additional WASM modules
+
+        Returns:
+            CallResult containing the tool's output
         """
         if isinstance(tool, str):
-            tool = self.tool(tool)
+            found_tool = self.tool(tool)
+            if found_tool is None:
+                raise ValueError(f"Tool '{tool}' not found")
+            tool = found_tool
         plugin = self.plugin(tool.servlet, wasi=wasi, functions=functions, wasm=wasm)
         return plugin.call(tool=tool.name, input=input)

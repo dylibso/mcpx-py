@@ -1,6 +1,9 @@
 on:
-  pull_request:
   workflow_dispatch:
+  push:
+    branches: [ "v*" ]
+    tags:
+      - 'v*'
 
 name: Publish
 
@@ -17,4 +20,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - name: uv publish
-        run: uv publish
+        run: |
+          uv build
+          uv publish dist/*

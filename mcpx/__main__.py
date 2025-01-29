@@ -10,7 +10,7 @@ import logging
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini, Chat
+from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini, Chat, ClientConfig
 from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """
@@ -161,7 +161,7 @@ async def run(args):
     except Exception as e:
         print(f"Warning: Could not setup command history: {str(e)}")
 
-    client = Client()
+    client = Client(config=ClientConfig(base_url=args.base_url, profile=args.profile))
     if args.log_level is not None and args.log_level != "off":
         level = logging.getLevelName(args.log_level.upper())
         client.configure_logging(level=level)
@@ -178,7 +178,8 @@ def main():
         choices=["off", "critical", "fatal", "warn", "info", "debug", "error"],
         help="Select log level",
     )
-    args.add_argument("--origin", default="https://www.mcp.run", help="mcpx server")
+    args.add_argument("--base-url", default="https://www.mcp.run", help="nURL")
+    args.add_argument("--profile", default="default", help="mcpx profile")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
     # List subcommand
