@@ -3,6 +3,8 @@ name = "mcpx"
 version = "0.1.0"
 description = "An mcp.run client for Python"
 readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.40.0",
