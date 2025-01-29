@@ -3,11 +3,11 @@ requires-python = ">=3.12"
 
 [[package]]
 name = "annotated-types"
-version = "0.6.0"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/67/fe/8c7b275824c6d2cd17c93ee85d0ee81c090285b6d52f4876ccc47cf9c3c4/annotated_types-0.6.0.tar.gz", hash = "sha256:563339e807e53ffd9c267e99fc6d9ea23eb8443c08f112651963e24e22f84a5d", size = 14670 }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/67/531ea369ba64dcff5ec9c3402f9f51bf748cec26dde048a2f973a4eea7f5/annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89", size = 16081 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/78/d31230046e58c207284c6b2c4e8d96e6d3cb4e52354721b944d3e1ee4aa5/annotated_types-0.6.0-py3-none-any.whl", hash = "sha256:0641064de18ba7a25dee8f96403ebc39113d0cb953a01429249d5c7564666a43", size = 12360 },
+    { url = "https://files.pythonhosted.org/packages/78/b6/6307fbef88d9b5ee7421e68d78a9f162e0da4900bc5f5793f6d3d0e34fb8/annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53", size = 13643 },
 ]
 
 [[package]]
@@ -169,16 +169,14 @@ wheels = [
 
 [[package]]
 name = "extism"
-version = "1.0.3"
+version = "1.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "annotated-types" },
-    { name = "cffi" },
     { name = "extism-sys" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/94/fdd0d2c0a48930ea2a19044ee0e5f321fd4b750adcdb262ed9768538f821/extism-1.0.3.tar.gz", hash = "sha256:7c1cf6e88996f2823fcf49d08e8dff942e5212d81344b96364a8fa17db3ab97f", size = 11587 }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/63/992500153f7f3d5f22aa0ee77037846fc085c8cdeb8e9e0513ce2f1c9811/extism-1.0.4.tar.gz", hash = "sha256:cfd9ed5200a9de8ab77d404c43ee2cae715132d00a06e26a3037e83b1458c86f", size = 11431 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/17/3319158e65d8da1883ab3f29911cc912f25618aaf0db6197bf7014cf2b5e/extism-1.0.3-py3-none-any.whl", hash = "sha256:5d8163804e98ae067e73759742f551fc0a799ea730de3a78fb6ece61eb0a1aae", size = 11042 },
+    { url = "https://files.pythonhosted.org/packages/60/be/2a89afe2501d002cdfb748ac2151414b8f782be2b1ebc9582e1d4fb38fd4/extism-1.0.4-py3-none-any.whl", hash = "sha256:db4ac909c795a7ea03ca129e00ce9e8f2cfa9e68ae0f6772fb0848958392a176", size = 11026 },
 ]
 
 [[package]]
@@ -305,7 +303,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mcpx"
+name = "mcpx-py"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

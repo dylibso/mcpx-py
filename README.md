@@ -51,22 +51,22 @@ $ export MCP_RUN_SESSION_ID=kabA7w6qH58H7kKOQ5su4v3bX_CeFn4k.Y4l/s/9dQwkjv9r8t/x
 Using `uv`:
 
 ```bash
-$ uv add git+https://github.com/dylibso/mcpx-py
+$ uv add mcpx-py
 ```
 
 Or `pip`:
 
 ```bash
-$ pip install git+https://github.com/dylibso/mcpx-py
+$ pip install mcpx-py
 ```
 
 ### Example code
 
 ```python
-from mcpx import Client   # Import the mcp.run client
+from mcpx_py import Client   # Import the mcp.run client
 
-client = Client()         # Create the client, this will check the
-                          # `MCP_RUN_SESSION_ID` environment variable
+client = Client()            # Create the client, this will check the
+                             # `MCP_RUN_SESSION_ID` environment variable
 
 # Call a tool with the given input
 results = client.call("eval-js", {"code": "'Hello, world!'"})

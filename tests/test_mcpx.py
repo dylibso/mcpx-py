@@ -1,4 +1,4 @@
-from mcpx import Client
+from mcpx_py import Client
 
 import unittest
 
