@@ -367,6 +367,11 @@ class Client:
     Cache of InstalledPlugins
     """
 
+    last_installations_request: str | None = None
+    """
+    Date header from last installations request
+    """
+
     def __init__(
         self,
         session_id: str | None = None,
@@ -401,11 +406,8 @@ class Client:
         url = self.endpoints.installations(self.config.profile)
         self.logger.info(f"Listing installed mcp.run servlets from {url}")
         headers = {}
-        if self.install_cache.last_update is not None:
-            modified = self.install_cache.last_update.strftime(
-                "%a, %d %b %Y %H:%M:%S GMT"
-            )
-            headers["if-modified-since"] = modified
+        if self.last_installations_request is not None:
+            headers["if-modified-since"] = self.last_installations_request
         res = requests.get(
             url,
             headers=headers,
@@ -415,9 +417,11 @@ class Client:
         )
         res.raise_for_status()
         if res.status_code == 301:
+            self.logger.debug(f"No changes since {self.last_installations_request}")
             for v in self.install_cache.items.values():
                 yield v
             return
+        self.last_installations_request = res.headers.get("Date")
         data = res.json()
         self.logger.debug(f"Got installed servlets from {url}: {data}")
         for install in data["installs"]:
