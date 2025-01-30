@@ -1,6 +1,6 @@
 [project]
 name = "mcpx-py"
-version = "0.1.0"
+version = "0.1.1"
 description = "An mcp.run client for Python"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,7 +23,7 @@ dev-dependencies = [
 ]
 
 [project.scripts]
-mcpx-client = "mcpx.__main__:main"
+mcpx-client = "mcpx_py.__main__:main"
 
 # Workaround for uv/setuptools version mismatch
 # https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
