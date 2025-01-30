@@ -1,4 +1,6 @@
 # mcpx-py
+[![PyPI](https://img.shields.io/pypi/v/mcpx-py)](https://pypi.org/project/mcpx-py/)
+
 
 A Python library and command line client for https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools.
 
