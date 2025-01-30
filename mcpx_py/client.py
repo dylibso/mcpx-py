@@ -31,6 +31,18 @@ class Endpoints:
             return f"{self.base}/api/profiles/{profile}/installations"
         return f"{self.base}/api/profiles/~/{profile}/installations"
 
+    def tasks(self, user: str = "~"):
+        """
+        List tasks
+        """
+        return f"{self.base}/api/users/{user}/tasks"
+
+    def profiles(self, user: str = "~"):
+        """
+        List profiles
+        """
+        return f"{self.base}/api/profiles/{user}"
+
     def search(self, query):
         """
         Search servlets
@@ -129,6 +141,47 @@ class Servlet:
             and self.slug == other.slug
             and self.name == other.name
         )
+
+
+@dataclass
+class Task:
+    """
+    mcp.run task
+    """
+
+    name: str
+    slug: str
+    runner: str
+    settings: dict
+    created_at: datetime
+    modified_at: datetime
+
+
+@dataclass
+class Run:
+    """
+    mcp.run run
+    """
+
+    name: str
+    status: str
+    results: List[object]
+    created_at: datetime
+    modified_at: datetime
+
+
+@dataclass
+class Profile:
+    """
+    mcp.run profile
+    """
+
+    name: str
+    username: str
+    description: str
+    is_public: bool
+    created_at: datetime
+    modified_at: datetime
 
 
 @dataclass
