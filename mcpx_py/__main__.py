@@ -10,7 +10,8 @@ import logging
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini, Chat, ClientConfig
+from . import Claude, OpenAI, Ollama, ChatConfig, Gemini, Chat
+from mcp_run import Client, ClientConfig
 from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """

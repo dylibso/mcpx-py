@@ -10,7 +10,7 @@ import tempfile
 import os
 import asyncio
 
-from .client import Client, Tool
+from mcp_run import Client, Tool
 from . import builtin_tools
 
 
