@@ -35,6 +35,16 @@ A Python library and command line client for https://www.mcp.run. This tool enab
 You will need to get an mcp.run session ID by running:
 
 ```bash
+npx --yes -p @dylibso/mcpx gen-session --write
+```
+
+This will generate a new session and write the session ID to a configuration file that can be used
+by `mcpx-py`.
+ 
+If you need to store the session ID in  an environment variable you can run `gen-session`
+without the `--write` flag:
+
+```bash
 npx --yes -p @dylibso/mcpx gen-session
 ```
 
