@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Iterator, Dict, List, Optional
 from datetime import datetime, timedelta
+from time import sleep
 import base64
 import logging
 import urllib
@@ -31,11 +32,26 @@ class Endpoints:
             return f"{self.base}/api/profiles/{profile}/installations"
         return f"{self.base}/api/profiles/~/{profile}/installations"
 
-    def tasks(self, user: str = "~"):
+    def tasks(self):
         """
         List tasks
         """
-        return f"{self.base}/api/users/{user}/tasks"
+        return f"{self.base}/api/users/~/tasks"
+
+    def create_task(self, profile, task):
+        """
+        Create task
+        """
+        return f"{self.base}/api/tasks/~/{profile}/{task}"
+
+    def task_signed_url(self, profile, task):
+        return f"{self.base}/api/tasks/~/{profile}/{task}/signed"
+
+    def runs(self, profile, task):
+        return f"{self.base}/api/runs/~/{profile}/{task}"
+
+    def run_status(self, profile, task, run):
+        return f"{self.base}/api/runs/~/{profile}/{task}/{run}"
 
     def profiles(self, user: str = "~"):
         """
@@ -144,30 +160,113 @@ class Servlet:
 
 
 @dataclass
+class TaskRun:
+    """
+    mcp.run task run
+    """
+
+    _client: "Client"
+    name: str
+    status: str
+    results_list: List[object]
+    created_at: datetime
+    modified_at: datetime
+    url: str | None
+
+    def wait(
+        self, interval=timedelta(milliseconds=250), timeout: timedelta | None = None
+    ):
+        start = datetime.now()
+        if self.url is None:
+            raise Exception("No task URL configured")
+        done = False
+        while not done:
+            res = requests.get(
+                self.url,
+                cookies={"sessionId": self._client.session_id},
+                timeout=timeout.total_seconds() if timeout is not None else None,
+            )
+            res.raise_for_status()
+            data = res.json()
+            if data["status"] == "running":
+                n = datetime.now() - start
+                if timeout is not None and (n > timeout or n + interval > timeout):
+                    return None
+                sleep(interval.total_seconds())
+            else:
+                done = True
+                self.results_list = data["results"]
+                self.status = data["status"]
+        return self.results(wait=False)
+
+    def results(self, wait=True, *args, **kw):
+        if wait and len(self.results_list) == 0:
+            self.wait(*args, **kw)
+        if self.status == "running":
+            return None
+        msg = self.results_list[-1]
+        if self.status == "error":
+            raise Exception(msg["error"])
+        r = msg.get("lastMessage", {}).get("content")
+        if isinstance(r, list) and len(r) == 1 and r[-1]["type"] == "text":
+            r = r[-1]["text"]
+        return r
+
+
+@dataclass
 class Task:
     """
     mcp.run task
     """
 
+    _client: "Client"
     name: str
     slug: str
     runner: str
+    prompt: str
+    model: str
     settings: dict
     created_at: datetime
     modified_at: datetime
 
+    @property
+    def profile(self) -> str:
+        return self.slug.split("/")[1]
 
-@dataclass
-class Run:
-    """
-    mcp.run run
-    """
+    def signed_url(self) -> str:
+        """
+        Get a signed URL for a task
+        """
+        url = self._client.endpoints.task_signed_url(self.profile, self.name)
+        self._client.logger.info(f"Creating signed url for {self.slug}")
+        res = requests.post(url, cookies={"sessionId": self._client.session_id})
+        res.raise_for_status()
+        data = res.json()
+        return data["url"]
 
-    name: str
-    status: str
-    results: List[object]
-    created_at: datetime
-    modified_at: datetime
+    def run(
+        self, data: dict, signed_url: str | None = None, run_id: str | None = None
+    ) -> TaskRun:
+        if signed_url is None:
+            signed_url = self.signed_url()
+        headers = {}
+        if run_id is not None:
+            headers["run-id"] = run_id
+        res = requests.post(signed_url, headers=headers, json=data)
+        res.raise_for_status()
+        url = res.json()["url"]
+        res = requests.get(url, cookies={"sessionId": self._client.session_id})
+        res.raise_for_status()
+        data = res.json()
+        return TaskRun(
+            _client=self._client,
+            name=data["name"],
+            status=data["status"],
+            results_list=data.get("results", []),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            modified_at=datetime.fromisoformat(data["modified_at"]),
+            url=url,
+        )
 
 
 @dataclass
@@ -457,6 +556,73 @@ class Client:
         """
         self.config.profile = profile
         self.last_installations_request = None
+
+    def create_task(
+        self, task_name, runner, model, prompt, api_key=None, settings=None
+    ) -> Task:
+        if api_key is None and runner.lower() == "openai":
+            api_key = os.environ.get("OPENAI_API_KEY")
+        elif api_key is None and runner.lower() == "anthropic":
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+        url = self.endpoints.create_task(self.config.profile, task_name)
+        self.logger.info(f"Creating mcp.run task {url}")
+        settings = settings or {}
+        if "key" not in settings and api_key is not None:
+            settings["key"] = api_key
+        data = {
+            "runner": runner,
+            runner: {
+                "prompt": prompt,
+                "model": model,
+            },
+            "settings": settings,
+        }
+        res = requests.put(url, cookies={"sessionId": self.session_id}, json=data)
+        res.raise_for_status()
+        data = res.json()
+        return Task(
+            _client=self,
+            name=data["name"],
+            slug=data["slug"],
+            runner=data["runner"],
+            settings=data["settings"],
+            prompt=prompt,
+            model=model,
+            created_at=datetime.fromisoformat(data["created_at"]),
+            modified_at=datetime.fromisoformat(data["modified_at"]),
+        )
+
+    def list_tasks(self) -> Iterator[Task]:
+        """
+        List all tasks associated with the configured profile
+        """
+        url = self.endpoints.tasks()
+        self.logger.info(f"Listing mcp.run tasks from {url}")
+        res = requests.get(url, cookies={"sessionId": self.session_id})
+        res.raise_for_status()
+        data = res.json()
+        for t in data:
+            task = Task(
+                _client=self,
+                name=t["name"],
+                slug=t["slug"],
+                runner=t["runner"],
+                settings=t.get("settings", {}),
+                prompt=t[t["runner"]]["prompt"],
+                model=t[t["runner"]]["model"],
+                created_at=datetime.fromisoformat(t["created_at"]),
+                modified_at=datetime.fromisoformat(t["modified_at"]),
+            )
+            if task.profile != self.config.profile:
+                continue
+            yield task
+
+    @property
+    def tasks(self) -> Dict[str, Task]:
+        t = {}
+        for task in self.list_tasks():
+            t[task.name] = t
+        return t
 
     def list_installs(self) -> Iterator[Servlet]:
         """
