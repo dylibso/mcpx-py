@@ -305,7 +305,7 @@ wheels = [
 [[package]]
 name = "mcp-run"
 version = "0.1.0"
-source = { git = "https://github.com/zshipko/mcp-run-py#389748693f91bf01ef76b92f5f4e1bbcdc41544a" }
+source = { git = "https://github.com/dylibso/mcp-run-py#bb87c818dfaaf6a968d29eace3efada3dc576686" }
 dependencies = [
     { name = "extism" },
     { name = "requests" },
@@ -334,7 +334,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
-    { name = "mcp-run", git = "https://github.com/zshipko/mcp-run-py" },
+    { name = "mcp-run", git = "https://github.com/dylibso/mcp-run-py" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "psutil", specifier = ">=6.1.1" },
