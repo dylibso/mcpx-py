@@ -80,17 +80,27 @@ pip install mcpx-py
 ### Example code
 
 ```python
-from mcpx_py import Client   # Import the mcp.run client
+from mcpx_py import Chat, Claude
 
-client = Client()            # Create the client, this will check the
-                             # `MCP_RUN_SESSION_ID` environment variable
+llm = Chat(Claude)
 
-# Call a tool with the given input
-results = client.call("eval-js", {"code": "'Hello, world!'"})
+# Or OpenAI
+# from mcpx import OpenAI
+# llm = Chat(OpenAI)
 
-# Iterate over the results
-for content in results.content:
-    print(content.text)
+# Or Ollama
+# from mcpx import Ollama
+# llm = Chat(Ollama)
+
+# Or Gemini
+# from mcpx import Gemini
+# llm = Chat(Gemini)
+
+# Prompt claude and iterate over the results
+async for response in llm.send_message(
+    "summarize the contents of example.com"
+):
+    print(response)
 ```
 
 More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py/tree/main/examples) directory

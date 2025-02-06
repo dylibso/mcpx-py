@@ -22,7 +22,7 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-mcp-run = { path = "../mcp-run-py" }
+mcp-run = { git = "https://github.com/zshipko/mcp-run-py" }
 
 [project.scripts]
 mcpx-client = "mcpx_py.__main__:main"

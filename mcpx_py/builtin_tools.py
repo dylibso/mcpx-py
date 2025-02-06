@@ -1,4 +1,4 @@
-from .client import Tool
+from mcp_run import Tool
 
 SEARCH = Tool(
     name="mcp_run_search_servlets",
