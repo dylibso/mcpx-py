@@ -303,12 +303,35 @@ wheels = [
 ]
 
 [[package]]
+name = "mcp-run"
+version = "0.1.0"
+source = { virtual = "../mcp-run-py" }
+dependencies = [
+    { name = "extism" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "extism", specifier = ">=1.0.4" },
+    { name = "requests", specifier = ">=2.32.3" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "python-lsp-ruff", specifier = ">=2.2.2" },
+    { name = "python-lsp-server", specifier = ">=1.12.0" },
+    { name = "ruff", specifier = ">=0.9.4" },
+]
+
+[[package]]
 name = "mcpx-py"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "extism" },
+    { name = "mcp-run" },
     { name = "ollama" },
     { name = "openai" },
     { name = "psutil" },
@@ -327,6 +350,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
     { name = "extism", specifier = ">=1.0.3" },
+    { name = "mcp-run", virtual = "../mcp-run-py" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "psutil", specifier = ">=6.1.1" },
