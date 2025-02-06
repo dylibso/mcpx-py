@@ -1,8 +1,7 @@
 # mcpx-py
 [![PyPI](https://img.shields.io/pypi/v/mcpx-py)](https://pypi.org/project/mcpx-py/)
 
-
-A Python library for interacting with mcp.run tools using LLMs
+A Python library for interacting with LLMs using mcp.run tools
 
 ## Features
 
