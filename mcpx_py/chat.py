@@ -234,7 +234,11 @@ class ChatProvider:
             yield res
 
     def _builtin_tools(self) -> List[object]:
-        return [self._convert_tool(builtin_tools.SEARCH)]
+        return [
+            self._convert_tool(builtin_tools.SEARCH),
+            self._convert_tool(builtin_tools.GET_PROFILES),
+            self._convert_tool(builtin_tools.SET_PROFILE),
+        ]
 
     def get_tools(self) -> List[object]:
         """
@@ -275,6 +279,39 @@ class ChatProvider:
                     role="tool",
                     content=c,
                     tool=ToolCall(name=name, input=input),
+                )
+                async for res in self.chat(c, tool=name):
+                    yield res
+                return
+            elif name in ["mcp_run_get_profiles"]:
+                p = []
+                for user, u in self.config.client.profiles.items():
+                    if user == '~':
+                        continue
+                    for profile in u.values():
+                        p.append(
+                            {
+                                "name": f"{user}/{profile.name}",
+                                "description": profile.description,
+                            }
+                        )
+                c = json.dumps(p)
+                yield ChatResponse(
+                    role="tool",
+                    content=c,
+                    tool=ToolCall(name=name, input=input),
+                )
+                async for res in self.chat(c, tool=name):
+                    yield res
+                return
+            elif name in ["mcp_run_set_profile"]:
+                profile = input["profile"]
+                c = f"Active profile set to {profile}"
+                yield ChatResponse(
+                    role="tool",
+                    content=c,
+                    tool=ToolCall(name=name, input=input),
+
                 )
                 async for res in self.chat(c, tool=name):
                     yield res
