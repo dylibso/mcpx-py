@@ -291,7 +291,7 @@ class ChatProvider:
                     for profile in u.values():
                         p.append(
                             {
-                                "name": f"{user}/{profile.name}",
+                                "name": f"{user}/{profile.slug.name}",
                                 "description": profile.description,
                             }
                         )

@@ -179,8 +179,8 @@ def main():
         choices=["off", "critical", "fatal", "warn", "info", "debug", "error"],
         help="Select log level",
     )
-    args.add_argument("--base-url", default="https://www.mcp.run", help="nURL")
-    args.add_argument("--profile", default="default", help="mcpx profile")
+    args.add_argument("--base-url", default="https://www.mcp.run", help="mcp.run URL")
+    args.add_argument("--profile", default="~/default", help="mcpx profile")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
     # List subcommand

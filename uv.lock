@@ -305,7 +305,7 @@ wheels = [
 [[package]]
 name = "mcp-run"
 version = "0.1.0"
-source = { git = "https://github.com/dylibso/mcp-run-py#ae48ae6136d37d1c27476ff840ddf1129af187da" }
+source = { git = "https://github.com/dylibso/mcp-run-py#7bc91219deb1c0047771e9367585b638d4a186b9" }
 dependencies = [
     { name = "extism" },
     { name = "requests" },
