@@ -261,8 +261,16 @@ class ChatProvider:
         try:
             # Handle builtin tools
             if name in ["mcp_run_search_servlets"]:
-                res = self.config.client.search(input["q"])
-                c = json.dumps(res)
+                x = []
+                for r in self.config.client.search(input["q"]):
+                    x.append(
+                        {
+                            "slug": r.slug,
+                            "meta": r.meta,
+                            "installation_count": r.installation_count,
+                        }
+                    )
+                c = json.dumps(x)
                 yield ChatResponse(
                     role="tool",
                     content=c,
