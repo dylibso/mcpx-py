@@ -257,7 +257,7 @@ class ChatProvider:
     async def call_tool(self, name: str, input: object, **kw) -> Iterator[ChatResponse]:
         """
         Call a tool by name with the given input, the extra arguments are passed to
-        `Client.call`
+        `Client.call_tool`
         """
         if isinstance(input, str):
             input = json.loads(input)
@@ -317,7 +317,7 @@ class ChatProvider:
                     yield res
                 return
 
-            res = self.config.client.call(tool=name, input=input, **kw)
+            res = self.config.client.call_tool(tool=name, params=input, **kw)
             for c in res.content:
                 if c.type == "text":
                     yield ChatResponse(

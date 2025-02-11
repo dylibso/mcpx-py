@@ -21,9 +21,6 @@ dev-dependencies = [
     "ruff>=0.8.1",
 ]
 
-[tool.uv.sources]
-mcp-run = { git = "https://github.com/dylibso/mcp-run-py" }
-
 [project.scripts]
 mcpx-client = "mcpx_py.__main__:main"
 

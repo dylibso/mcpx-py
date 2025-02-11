@@ -305,10 +305,14 @@ wheels = [
 [[package]]
 name = "mcp-run"
 version = "0.1.0"
-source = { git = "https://github.com/dylibso/mcp-run-py#7bc91219deb1c0047771e9367585b638d4a186b9" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "extism" },
     { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/0d/9d28b26105af35112b09bc611bb10258b5bee70ab210a248d2eb910654b5/mcp_run-0.1.0.tar.gz", hash = "sha256:5013a433cab30cd91b2e9b1e51243ec36bd82ba7f4b8d5370e54384c0c3b2de1", size = 14065 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/3f/dc389d4d83ac530d16aec94d3ca3162bceeb1ce69fbf7739c9b173303587/mcp_run-0.1.0-py3-none-any.whl", hash = "sha256:a23c0dc53339d02cc3f0414bfcf21fa20f782cac8452ffce86fb2b273c9813cf", size = 15277 },
 ]
 
 [[package]]
@@ -334,7 +338,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
-    { name = "mcp-run", git = "https://github.com/dylibso/mcp-run-py" },
+    { name = "mcp-run", specifier = ">=0.1.0" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "psutil", specifier = ">=6.1.1" },

@@ -36,7 +36,7 @@ async def list_cmd(client, args):
 
 async def tool_cmd(client, args):
     try:
-        res = client.call(tool=args.name, input=json.loads(args.input))
+        res = client.call_tool(tool=args.name, input=json.loads(args.input))
         for c in res:
             if c.type == "text":
                 print(c.text)
