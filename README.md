@@ -1,15 +1,9 @@
 # mcpx-py
 [![PyPI](https://img.shields.io/pypi/v/mcpx-py)](https://pypi.org/project/mcpx-py/)
 
-
-A Python library and command line client for https://www.mcp.run. This tool enables seamless interaction with various AI models while providing access to a suite of powerful tools.
+A Python library for interacting with LLMs using mcp.run tools
 
 ## Features
-
-### Tool Management
-- **List Tools**: Browse available tools and their capabilities
-- **Direct Tool Execution**: Run tools with specific inputs without LLM interaction
-- **Tool Integration**: Use tools seamlessly within AI chat conversations
 
 ### AI Provider Support
 - **Ollama**: https://ollama.com/
@@ -80,17 +74,27 @@ pip install mcpx-py
 ### Example code
 
 ```python
-from mcpx_py import Client   # Import the mcp.run client
+from mcpx_py import Chat, Claude
 
-client = Client()            # Create the client, this will check the
-                             # `MCP_RUN_SESSION_ID` environment variable
+llm = Chat(Claude)
 
-# Call a tool with the given input
-results = client.call("eval-js", {"code": "'Hello, world!'"})
+# Or OpenAI
+# from mcpx import OpenAI
+# llm = Chat(OpenAI)
 
-# Iterate over the results
-for content in results.content:
-    print(content.text)
+# Or Ollama
+# from mcpx import Ollama
+# llm = Chat(Ollama)
+
+# Or Gemini
+# from mcpx import Gemini
+# llm = Chat(Gemini)
+
+# Prompt claude and iterate over the results
+async for response in llm.send_message(
+    "summarize the contents of example.com"
+):
+    print(response)
 ```
 
 More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py/tree/main/examples) directory

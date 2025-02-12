@@ -1,4 +1,4 @@
-from .client import Tool
+from mcp_run import Tool
 
 SEARCH = Tool(
     name="mcp_run_search_servlets",
@@ -29,5 +29,35 @@ SEARCH = Tool(
             },
         },
         "required": [],
+    },
+)
+
+GET_PROFILES = Tool(
+    name="mcp_run_get_profiles",
+    description="""
+    List all profiles for the current user.
+    """,
+    input_schema={
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+)
+
+
+SET_PROFILE = Tool(
+    name="mcp_run_set_profile",
+    description="""
+    Set the active profile
+    """,
+    input_schema={
+        "type": "object",
+        "properties": {
+            "profile": {
+                "type": "string",
+                "description": """The name of the profile to set as active""",
+            },
+        },
+        "required": ["profile"],
     },
 )

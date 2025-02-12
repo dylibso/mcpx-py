@@ -21,9 +21,7 @@ async def main():
     # llm = Chat(Gemini)
 
     # Prompt claude and iterate over the results
-    async for response in llm.send_message(
-        "what is the total volume of nine three foot by 5 foot by four foot boxes"
-    ):
+    async for response in llm.send_message("summarize the contents of example.com"):
         print(response)
 
 

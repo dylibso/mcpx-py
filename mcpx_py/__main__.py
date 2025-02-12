@@ -10,7 +10,8 @@ import logging
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Client, Gemini, Chat, ClientConfig
+from . import Claude, OpenAI, Ollama, ChatConfig, Gemini, Chat
+from mcp_run import Client, ClientConfig
 from .chat import SYSTEM_PROMPT
 
 CHAT_HELP = """
@@ -35,7 +36,7 @@ async def list_cmd(client, args):
 
 async def tool_cmd(client, args):
     try:
-        res = client.call(tool=args.name, input=json.loads(args.input))
+        res = client.call_tool(tool=args.name, input=json.loads(args.input))
         for c in res:
             if c.type == "text":
                 print(c.text)
@@ -178,8 +179,8 @@ def main():
         choices=["off", "critical", "fatal", "warn", "info", "debug", "error"],
         help="Select log level",
     )
-    args.add_argument("--base-url", default="https://www.mcp.run", help="nURL")
-    args.add_argument("--profile", default="default", help="mcpx profile")
+    args.add_argument("--base-url", default="https://www.mcp.run", help="mcp.run URL")
+    args.add_argument("--profile", default="~/default", help="mcpx profile")
     sub = args.add_subparsers(title="subcommand", help="subcommands", required=True)
 
     # List subcommand

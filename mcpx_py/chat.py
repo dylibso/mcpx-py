@@ -10,7 +10,7 @@ import tempfile
 import os
 import asyncio
 
-from .client import Client, Tool
+from mcp_run import Client, Tool
 from . import builtin_tools
 
 
@@ -234,7 +234,11 @@ class ChatProvider:
             yield res
 
     def _builtin_tools(self) -> List[object]:
-        return [self._convert_tool(builtin_tools.SEARCH)]
+        return [
+            self._convert_tool(builtin_tools.SEARCH),
+            self._convert_tool(builtin_tools.GET_PROFILES),
+            self._convert_tool(builtin_tools.SET_PROFILE),
+        ]
 
     def get_tools(self) -> List[object]:
         """
@@ -253,7 +257,7 @@ class ChatProvider:
     async def call_tool(self, name: str, input: object, **kw) -> Iterator[ChatResponse]:
         """
         Call a tool by name with the given input, the extra arguments are passed to
-        `Client.call`
+        `Client.call_tool`
         """
         if isinstance(input, str):
             input = json.loads(input)
@@ -261,8 +265,16 @@ class ChatProvider:
         try:
             # Handle builtin tools
             if name in ["mcp_run_search_servlets"]:
-                res = self.config.client.search(input["q"])
-                c = json.dumps(res)
+                x = []
+                for r in self.config.client.search(input["q"]):
+                    x.append(
+                        {
+                            "slug": r.slug,
+                            "meta": r.meta,
+                            "installation_count": r.installation_count,
+                        }
+                    )
+                c = json.dumps(x)
                 yield ChatResponse(
                     role="tool",
                     content=c,
@@ -271,8 +283,41 @@ class ChatProvider:
                 async for res in self.chat(c, tool=name):
                     yield res
                 return
+            elif name in ["mcp_run_get_profiles"]:
+                p = []
+                for user, u in self.config.client.profiles.items():
+                    if user == '~':
+                        continue
+                    for profile in u.values():
+                        p.append(
+                            {
+                                "name": f"{user}/{profile.slug.name}",
+                                "description": profile.description,
+                            }
+                        )
+                c = json.dumps(p)
+                yield ChatResponse(
+                    role="tool",
+                    content=c,
+                    tool=ToolCall(name=name, input=input),
+                )
+                async for res in self.chat(c, tool=name):
+                    yield res
+                return
+            elif name in ["mcp_run_set_profile"]:
+                profile = input["profile"]
+                c = f"Active profile set to {profile}"
+                yield ChatResponse(
+                    role="tool",
+                    content=c,
+                    tool=ToolCall(name=name, input=input),
 
-            res = self.config.client.call(tool=name, input=input, **kw)
+                )
+                async for res in self.chat(c, tool=name):
+                    yield res
+                return
+
+            res = self.config.client.call_tool(tool=name, params=input, **kw)
             for c in res.content:
                 if c.type == "text":
                     yield ChatResponse(
