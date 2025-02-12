@@ -135,7 +135,7 @@ class ChatResponse:
         """
         Check if an error occured
         """
-        return self.error or False
+        return self._error or False
 
 
 class ChatProvider:
