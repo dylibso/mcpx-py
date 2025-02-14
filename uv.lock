@@ -317,7 +317,7 @@ wheels = [
 
 [[package]]
 name = "mcpx-py"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -338,7 +338,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40.0" },
-    { name = "mcp-run", specifier = ">=0.1.0" },
+    { name = "mcp-run", specifier = ">=0.1.1" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "psutil", specifier = ">=6.1.1" },
