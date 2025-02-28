@@ -235,8 +235,12 @@ class ChatProvider:
         Handle chat message, if `tool` is set then the message is the result
         of a tool call
         """
-        for res in asyncio.run(self.chat(*args, **kw)):
-            yield res
+        gen = self.chat(*args, **kw)
+        while True:
+            try:
+                yield asyncio.run(gen.__anext__())
+            except StopAsyncIteration:
+                break
 
     def _builtin_tools(self) -> List[object]:
         return [
@@ -617,5 +621,9 @@ class Chat:
         """
         Send a chat message to the LLM, returning an iterator of ChatResponse
         """
-        for res in asyncio.run(self.send_message(msg)):
-            yield res
+        gen = self.send_message(msg)
+        while True:
+            try:
+                yield asyncio.run(gen.__anext__())
+            except StopAsyncIteration:
+                break
