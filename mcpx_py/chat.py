@@ -130,6 +130,11 @@ class ChatResponse:
     Set to True when the tool raised an error
     """
 
+    original: object | None = None
+    """
+    The original response directly from the client library being used
+    """
+
     @property
     def is_error(self):
         """
@@ -286,7 +291,7 @@ class ChatProvider:
             elif name in ["mcp_run_get_profiles"]:
                 p = []
                 for user, u in self.config.client.profiles.items():
-                    if user == '~':
+                    if user == "~":
                         continue
                     for profile in u.values():
                         p.append(
@@ -311,7 +316,6 @@ class ChatProvider:
                     role="tool",
                     content=c,
                     tool=ToolCall(name=name, input=input),
-
                 )
                 async for res in self.chat(c, tool=name):
                     yield res
@@ -398,7 +402,7 @@ class Ollama(ChatProvider):
         content = response.message.content
         if content is not None and content != "":
             self.append_message(content, role="assistant")
-            yield ChatResponse(role="assistant", content=content)
+            yield ChatResponse(role="assistant", content=content, original=response)
         if response.message.tool_calls is not None:
             for call in response.message.tool_calls:
                 f = call.function.arguments
@@ -447,7 +451,7 @@ class OpenAI(ChatProvider):
             content = response.message.content
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content)
+                yield ChatResponse(role="assistant", content=content, original=response)
             if (
                 response.message.tool_calls is not None
                 and response.finish_reason == "tool_calls"
@@ -489,7 +493,7 @@ class Gemini(OpenAI):
             content = response.message.content
             if content is not None and content != "":
                 self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content)
+                yield ChatResponse(role="assistant", content=content, original=response)
 
             if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
@@ -549,7 +553,7 @@ class Claude(ChatProvider):
                     yield res
             elif block.type == "text":
                 self.append_message(block.text, role="assistant")
-                yield ChatResponse(role="assistant", content=block.text)
+                yield ChatResponse(role="assistant", content=block.text, original=res)
 
 
 def _detect_provider() -> ChatProvider:
