@@ -158,7 +158,7 @@ class ChatProvider:
     Message history
     """
 
-    tools: List[dict]
+    tools: List[Tool]
     """
     A list of converted tool objects
     """
@@ -247,14 +247,14 @@ class ChatProvider:
             except StopAsyncIteration:
                 break
 
-    def _builtin_tools(self) -> List[object]:
+    def _builtin_tools(self) -> List[Tool]:
         return [
-            self._convert_tool(builtin_tools.SEARCH),
-            self._convert_tool(builtin_tools.GET_PROFILES),
-            self._convert_tool(builtin_tools.SET_PROFILE),
+            builtin_tools.SEARCH,
+            builtin_tools.GET_PROFILES,
+            builtin_tools.SET_PROFILE,
         ]
 
-    def get_tools(self) -> List[object]:
+    def get_tools(self) -> List[Tool]:
         """
         Get all tools from the mcp server
         """
@@ -264,10 +264,13 @@ class ChatProvider:
             if t is None:
                 continue
             for tool in t.tools.values():
-                if self.config.ignore_tools is not None and tool.name in self.config.ignore_tools:
+                if (
+                    self.config.ignore_tools is not None
+                    and tool.name in self.config.ignore_tools
+                ):
                     continue
                 self.logger.info(f"Tool: {tool.name}")
-                self.tools.append(self._convert_tool(tool))
+                self.tools.append(tool)
         return self.tools
 
     async def call_tool(self, name: str, input: object, **kw) -> Iterator[ChatResponse]:
@@ -340,7 +343,14 @@ class ChatProvider:
                         content=c.text,
                         tool=ToolCall(name=name, input=input),
                     )
-                    async for res in self.chat(c.text, tool=name):
+                    async for res in self.chat(
+                        f"""
+                        The result of the {name} tool is: {c.text}
+                        
+                        Let's continue to the next step in the task, or respond with the result to the user if it is the final step
+                        """,
+                        tool=name,
+                    ):
                         yield res
                 elif c.type == "image":
                     ext = ".jpg"
@@ -405,7 +415,7 @@ class Ollama(ChatProvider):
         response: OllamaChatResponse = self.provider_client.chat(
             model=self.config.model,
             stream=False,
-            tools=self.tools,
+            tools=[self._convert_tool(t) for t in self.tools],
             messages=self.messages,
             format=self.config.format,
         )
@@ -454,7 +464,7 @@ class OpenAI(ChatProvider):
         r = self.provider_client.chat.completions.create(
             messages=self.messages,
             model=self.config.model,
-            tools=self.tools,
+            tools=[self._convert_tool(t) for t in self.tools],
             max_completion_tokens=self.config.max_tokens,
         )
         for response in r.choices:
@@ -494,7 +504,7 @@ class Gemini(OpenAI):
         r = self.provider_client.chat.completions.create(
             messages=self.messages,
             model=self.config.model,
-            tools=self.tools,
+            tools=[self._convert_tool(t) for t in self.tools],
             max_tokens=self.config.max_tokens,
         )
         for response in r.choices:
@@ -554,7 +564,7 @@ class Claude(ChatProvider):
             max_tokens=self.config.max_tokens,
             messages=self.messages,
             model=self.config.model,
-            tools=self.tools,
+            tools=[self._convert_tool(t) for t in self.tools],
             system=self.config.system,
         )
         for block in res.content:
