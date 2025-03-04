@@ -113,6 +113,7 @@ async def chat_cmd(client, args):
         base_url=args.url,
         system=args.system,
         format=args.format,
+        ignore_tools=args.ignore
     )
     provider = None
     if args.provider == "ollama":
@@ -203,6 +204,7 @@ def main():
         default="claude",
         help="LLM provider",
     )
+    chat_parser.add_argument("--ignore", "-x", default=[], action="append", help="Tools to ignore")
     chat_parser.add_argument("--url", "-u", default=None, help="Provider endpoint URL")
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
