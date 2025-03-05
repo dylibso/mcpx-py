@@ -285,6 +285,8 @@ class ChatProvider:
             # Handle builtin tools
             if name in ["mcp_run_search_servlets"]:
                 x = []
+                if input["q"] == "":
+                    return 
                 for r in self.config.client.search(input["q"]):
                     x.append(
                         {
@@ -296,7 +298,7 @@ class ChatProvider:
                 c = json.dumps(x)
                 yield ChatResponse(
                     role="tool",
-                    content=c,
+                    content=f"Search results: {c}",
                     tool=ToolCall(name=name, input=input),
                 )
                 async for res in self.chat(c, tool=name):
@@ -317,7 +319,7 @@ class ChatProvider:
                 c = json.dumps(p)
                 yield ChatResponse(
                     role="tool",
-                    content=c,
+                    content=f"Profiles found: {c}",
                     tool=ToolCall(name=name, input=input),
                 )
                 async for res in self.chat(c, tool=name):
@@ -376,7 +378,7 @@ class ChatProvider:
             )
             async for res in self.chat(
                 f"Encountered an error when calling tool \
-                            {name}: {s}",
+                            {name}, debug this then continue the original task: {s}",
                 tool=name,
             ):
                 yield res
