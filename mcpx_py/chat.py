@@ -89,6 +89,11 @@ class ChatConfig:
 
 @dataclass
 class ToolCall:
+    id: str | None
+    """
+    Tool call ID
+    """
+
     name: str
     """
     Tool name
@@ -273,7 +278,9 @@ class ChatProvider:
                 self.tools.append(tool)
         return self.tools
 
-    async def call_tool(self, name: str, input: object, **kw) -> Iterator[ChatResponse]:
+    async def call_tool(
+        self, name: str, input: object, tool_call_id: str | None = None, **kw
+    ) -> Iterator[ChatResponse]:
         """
         Call a tool by name with the given input, the extra arguments are passed to
         `Client.call_tool`
@@ -286,7 +293,7 @@ class ChatProvider:
             if name in ["mcp_run_search_servlets"]:
                 x = []
                 if input["q"] == "":
-                    return 
+                    return
                 for r in self.config.client.search(input["q"]):
                     x.append(
                         {
@@ -299,7 +306,7 @@ class ChatProvider:
                 yield ChatResponse(
                     role="tool",
                     content=f"Search results: {c}",
-                    tool=ToolCall(name=name, input=input),
+                    tool=ToolCall(name=name, input=input, id=tool_call_id),
                 )
                 async for res in self.chat(c, tool=name):
                     yield res
@@ -320,7 +327,7 @@ class ChatProvider:
                 yield ChatResponse(
                     role="tool",
                     content=f"Profiles found: {c}",
-                    tool=ToolCall(name=name, input=input),
+                    tool=ToolCall(name=name, input=input, id=tool_call_id),
                 )
                 async for res in self.chat(c, tool=name):
                     yield res
@@ -331,7 +338,7 @@ class ChatProvider:
                 yield ChatResponse(
                     role="tool",
                     content=c,
-                    tool=ToolCall(name=name, input=input),
+                    tool=ToolCall(name=name, input=input, id=tool_call_id),
                 )
                 async for res in self.chat(c, tool=name):
                     yield res
@@ -343,11 +350,14 @@ class ChatProvider:
                     yield ChatResponse(
                         role="tool",
                         content=c.text,
-                        tool=ToolCall(name=name, input=input),
+                        tool=ToolCall(name=name, input=input, id=tool_call_id),
                     )
+                    id = ""
+                    if tool_call_id is not None:
+                        id = f"(id = {tool_call_id})"
                     async for res in self.chat(
                         f"""
-                        The result of the {name} tool is: {c.text}
+                        The result of the {name} {id} tool is: {c.text}
                         
                         Let's continue to the next step in the task, or respond with the result to the user if it is the final step
                         """,
@@ -366,14 +376,14 @@ class ChatProvider:
                             role="tool",
                             content=tmp.name,
                             kind="image",
-                            tool=ToolCall(name=name, input=input),
+                            tool=ToolCall(name=name, input=input, id=tool_call_id),
                         )
         except Exception:
             s = traceback.format_exc()
             yield ChatResponse(
                 role="tool",
                 content=s,
-                tool=ToolCall(name=name, input=input),
+                tool=ToolCall(name=name, input=input, id=tool_call_id),
                 _error=True,
             )
             async for res in self.chat(
@@ -481,7 +491,9 @@ class OpenAI(ChatProvider):
             ):
                 for call in response.message.tool_calls:
                     f = call.function.arguments
-                    async for res in self.call_tool(call.function.name, f):
+                    async for res in self.call_tool(
+                        call.function.name, f, tool_call_id=id
+                    ):
                         yield res
 
 
@@ -521,7 +533,10 @@ class Gemini(OpenAI):
             if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
                     f = call.function.arguments
-                    async for res in self.call_tool(call.function.name, f):
+                    id = call.id
+                    async for res in self.call_tool(
+                        call.function.name, f, tool_call_id=id
+                    ):
                         yield res
 
             # TODO: remove this, checking `toolCalls` is only required for now because of a bug
@@ -533,7 +548,10 @@ class Gemini(OpenAI):
             ):
                 for call in response.message.toolCalls:
                     f = call["function"]["arguments"]
-                    async for res in self.call_tool(call["function"]["name"], f):
+                    id = call.get("id")
+                    async for res in self.call_tool(
+                        call["function"]["name"], f, tool_call_id=id
+                    ):
                         yield res
 
 
@@ -572,7 +590,9 @@ class Claude(ChatProvider):
         for block in res.content:
             self.logger.debug(block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
-                async for res in self.call_tool(block.name, block.input):
+                async for res in self.call_tool(
+                    block.name, block.input, tool_call_id=block.id
+                ):
                     yield res
             elif block.type == "text":
                 self.append_message(block.text, role="assistant")
