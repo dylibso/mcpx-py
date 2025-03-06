@@ -82,7 +82,7 @@ class Chat:
         self.agent = Agent(
             config.model,
             client=config.client,
-            system_prompt=,
+            system_prompt=system,
             ignore_tools=config.ignore_tools,
             result_type=result_type,
             *args,
