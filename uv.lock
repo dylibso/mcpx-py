@@ -513,15 +513,15 @@ wheels = [
 
 [[package]]
 name = "mcp-run"
-version = "0.1.4"
+version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "extism" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/66/24a8b280570d7727b4f247c81d54c05ecbc9ec80f8665e8d47211744527b/mcp_run-0.1.4.tar.gz", hash = "sha256:e23f7232a096eb473b741a75cf79b02867c775d053e56d19ddf3f26476a970db", size = 14159 }
+sdist = { url = "https://files.pythonhosted.org/packages/09/ef/0048b309955fe714cfb9a08fe826f3d3f9a821ae78efe5d9f747785e091c/mcp_run-0.1.5.tar.gz", hash = "sha256:ca8fc6803750adc009a173328b35d569306d2a4a068cccb295370665746f872d", size = 14207 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/39/65e36395f8b4889e7c43bfc137ed84eb9b4a08b75b0300e21b1fb3f1b941/mcp_run-0.1.4-py3-none-any.whl", hash = "sha256:8b3cec462c5253e6b7f594c1fc7cb94ddddebe983a8ecb5946c01ed1316eae9a", size = 15343 },
+    { url = "https://files.pythonhosted.org/packages/91/98/c545dc0a26121abba5f8ba8d4959d44b6151326cce1413631ec218b01768/mcp_run-0.1.5-py3-none-any.whl", hash = "sha256:cbcfe91878a7666611560a504a05cc9fc11105cb1029de851fcf8a5ace80d296", size = 15367 },
 ]
 
 [[package]]

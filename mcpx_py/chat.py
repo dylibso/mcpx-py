@@ -210,8 +210,11 @@ class Chat:
                 )
         return p
 
-    def _tool_mcp_run_set_profile(self, input):
+    def _tool_mcp_run_set_profile(
+        self, input: TypedDict("SetProfile", {"profile": str})
+    ):
         profile = input["profile"]
+        self.agent.client.logger.info("Setting profile to {profile}")
         if "/" not in profile:
             profile = "~/" + profile
         self.agent.set_profile(profile)
