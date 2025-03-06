@@ -1,7 +1,8 @@
 from mcpx_pydantic_ai import Agent, pydantic_ai, mcp_run
 
+
 from dataclasses import dataclass
-from typing import List, TypedDict, Any
+from typing import List, TypedDict
 
 from . import builtin_tools
 
@@ -80,7 +81,7 @@ class Chat:
 
         if "result_type" not in kw:
             kw["result_type"] = config.format
-        
+
         self.agent = Agent(
             config.model,
             client=config.client,
@@ -112,27 +113,71 @@ class Chat:
         """
         Send a chat message to the LLM
         """
-        res = await self.agent.run(
-            msg,
-            message_history=self.history,
-            *args,
-            **kw,
-        )
-        self.history.extend(res.new_messages())
+        with pydantic_ai.capture_run_messages() as messages:
+            res = await self.agent.run(
+                msg,
+                message_history=self.history,
+                *args,
+                **kw,
+            )
+        self.history.extend(messages)
         return res
 
     def send_message_sync(self, msg, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        res = self.agent.run_sync(
-            msg,
-            message_history=self.history,
-            *args,
-            **kw,
-        )
-        self.history.extend(res.new_messages())
+        with pydantic_ai.capture_run_messages() as messages:
+            res = self.agent.run_sync(
+                msg,
+                message_history=self.history,
+                *args,
+                **kw,
+            )
+        self.history.extend(messages)
         return res
+
+    async def iter(self, msg, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+        with pydantic_ai.capture_run_messages() as messages:
+            async with self.agent.iter(
+                msg, message_history=self.history, *args, **kw
+            ) as run:
+                async for node in run:
+                    yield node
+        self.history.extend(messages)
+
+    async def iter_content(self, msg, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+        with pydantic_ai.capture_run_messages() as messages:
+            async with self.agent.iter(
+                msg, message_history=self.history, *args, **kw
+            ) as run:
+                async for node in run:
+                    if hasattr(node, "response"):
+                        content = node.response
+                    elif hasattr(node, "model_response"):
+                        content = node.model_response
+                    elif hasattr(node, "request"):
+                        content = node.request
+                    elif hasattr(node, "model_request"):
+                        content = node.model_request
+                    elif hasattr(node, "data"):
+                        content = node.data
+                    yield content
+        self.history.extend(messages)
+
+    async def inspect(self, msg, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+        with pydantic_ai.capture_run_messages() as messages:
+            res = await self.send_message(msg, *args, **kw)
+        return res, messages
 
     def _tool_mcp_run_search_servlets(
         self, input: TypedDict("SearchServlets", {"q": str})
@@ -167,6 +212,8 @@ class Chat:
 
     def _tool_mcp_run_set_profile(self, input):
         profile = input["profile"]
+        if "/" not in profile:
+            profile = "~/" + profile
         self.agent.set_profile(profile)
         return f"Active profile set to {profile}"
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import os
 import readline
 import atexit
@@ -14,6 +15,7 @@ from . import ChatConfig, Chat
 from mcp_run import Client, ClientConfig
 from .chat import SYSTEM_PROMPT
 from ollama import Client as OllamaClient
+import pydantic_ai
 
 CHAT_HELP = """
 Available commands:
@@ -29,6 +31,7 @@ async def list_cmd(client, args):
     for install in client.installs.values():
         for tool in install.tools.values():
             print()
+
             print(tool.name)
             print(tool.description)
             print("Input schema:")
@@ -88,8 +91,16 @@ async def chat_loop(chat):
                 return False
         if msg == "":
             return True
-        res = await chat.send_message(msg)
-        print(res.data)
+        async for res in chat.iter_content(msg):
+            if not isinstance(res, pydantic_ai.models.ModelResponse):
+                continue
+            for part in res.parts:
+                if isinstance(part, pydantic_ai.messages.TextPart):
+                    print(part.content)
+                elif isinstance(part, pydantic_ai.messages.ToolCallPart):
+                    print(
+                        f">> Tool: {part.tool_name} ({part.tool_call_id}) input={part.args}"
+                    )
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True
