@@ -74,24 +74,21 @@ class Chat:
         **kw,
     ):
         self.config = config
-        system = kw.get("system_prompt", self.config.system)
-        result_type=kw.get("result_type", self.config.format)
-        for f in ["system_prompt", "result_type"]:
-            if f in kw:
-                del kw[f]
         self.agent = Agent(
             config.model,
             client=config.client,
-            system_prompt=system,
+            system_prompt=config.system,
             ignore_tools=config.ignore_tools,
-            result_type=result_type,
+            result_type=config.format,
             *args,
             **kw,
         )
+        self._register_builtins()
+        self.history = []
 
+    def _register_builtins(self):
         for tool in builtin_tools.TOOLS:
             self.agent.register_tool(tool, getattr(self, "_tool_" + tool.name))
-        self.history = []
 
     @property
     def client(self):
