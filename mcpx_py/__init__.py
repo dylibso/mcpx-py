@@ -1,5 +1,5 @@
 from .chat import ChatProvider, ChatConfig, Chat, Ollama, OpenAI, Claude, Gemini
-import mcp_run as client
+import mcp_run
 
 __all__ = [
     "Chat",
@@ -9,5 +9,5 @@ __all__ = [
     "OpenAI",
     "Claude",
     "Gemini",
-    "client",
+    "mcp_run",
 ]
