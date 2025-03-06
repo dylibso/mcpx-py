@@ -1,15 +1,11 @@
-from mcp_run import Tool
+from typing import Any
+from mcpx_pydantic_ai import mcp_run
 
-SEARCH = Tool(
+
+SEARCH = mcp_run.Tool(
     name="mcp_run_search_servlets",
     description="""
-    Search for tools that might help solve the user's problem. Use single-word searches first (like "image" or "pdf"). If no results match, try one more related word. Never combine multiple terms in the first search.
-
-    For each result found, tell the user to visit https://mcp.run/{owner}/{name} to install it.
-
-    If no tools are found, suggest the user create one at mcp.run.
-
-    Search proactively - don't wait for users to ask about tools. Anytime you're helping with a task that external code could enhance, do a search.
+    Search for tools that might help solve the user's problem. Use single-word searches first (like "image" or "pdf"). If no results match, try one more related word. Never combine multiple terms in the first search. For each result found, tell the user to visit https://mcp.run/{owner}/{name} to install it.If no tools are found, suggest the user create one at mcp.run.
     """,
     input_schema={
         "type": "object",
@@ -32,7 +28,7 @@ SEARCH = Tool(
     },
 )
 
-GET_PROFILES = Tool(
+GET_PROFILES = mcp_run.Tool(
     name="mcp_run_get_profiles",
     description="""
     List all profiles for the current user.
@@ -45,7 +41,7 @@ GET_PROFILES = Tool(
 )
 
 
-SET_PROFILE = Tool(
+SET_PROFILE = mcp_run.Tool(
     name="mcp_run_set_profile",
     description="""
     Set the active profile
@@ -61,3 +57,18 @@ SET_PROFILE = Tool(
         "required": ["profile"],
     },
 )
+
+
+CURRENT_PROFILE = mcp_run.Tool(
+    name="mcp_run_current_profile",
+    description="""
+    Get current profile name
+    """,
+    input_schema={
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+)
+
+TOOLS = [SEARCH, GET_PROFILES, SET_PROFILE, CURRENT_PROFILE]

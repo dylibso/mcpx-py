@@ -1,13 +1,12 @@
-from .chat import ChatProvider, ChatConfig, Chat, Ollama, OpenAI, Claude, Gemini
-import mcp_run as client
+from .chat import ChatConfig, Chat
+from mcpx_pydantic_ai import Agent, BaseModel, Field
+import mcp_run
 
 __all__ = [
     "Chat",
     "ChatConfig",
-    "ChatProvider",
-    "Ollama",
-    "OpenAI",
-    "Claude",
-    "Gemini",
-    "client",
+    "Agent",
+    "BaseModel",
+    "Field",
+    "mcp_run",
 ]
