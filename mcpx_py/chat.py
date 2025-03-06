@@ -74,12 +74,17 @@ class Chat:
         **kw,
     ):
         self.config = config
+        system = kw.get("system_prompt", self.config.system)
+        result_type=kw.get("result_type", self.config.format)
+        for f in ["system_prompt", "result_type"]:
+            if f in kw:
+                del kw[f]
         self.agent = Agent(
             config.model,
             client=config.client,
-            system_prompt=self.config.system,
+            system_prompt=,
             ignore_tools=config.ignore_tools,
-            result_type=self.config.format,
+            result_type=result_type,
             *args,
             **kw,
         )
