@@ -1,12 +1,12 @@
 [project]
 name = "mcpx-py"
-version = "0.3.0"
+version = "0.4.0"
 description = "An mcp.run client for Python"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.40.0",
-    "mcp-run>=0.1.1",
+    "mcp-run>=0.1.4",
     "ollama>=0.4.2",
     "openai>=1.58.1",
     "psutil>=6.1.1",

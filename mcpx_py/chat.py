@@ -214,25 +214,44 @@ class ChatProvider:
         """
         return tool
 
+    @staticmethod
+    def _format_tool_result(msg: str, role: str, tool: ToolCall):
+        return {
+            "role": "tool",
+            "tool_call_id": tool.id,
+            "content": [
+                {
+                    "type": "text",
+                    "content": f"Result of tool name={tool.name} id={tool.id} result={msg}",
+                }
+            ],
+        }
+
     def clear_history(self):
         """
         Clear the chat history
         """
         self.messages = []
 
-    def append_message(self, msg: str, role: str = "user", tool: str | None = None):
+    def append_message(
+        self, msg: str, role: str = "user", tool: ToolCall | None = None
+    ):
         """
         Add a new message to the chat
         """
-        self.messages.append(
-            {
-                "role": role,
-                "content": msg if tool is None else f"{tool} output: {msg}",
-            }
-        )
+        if tool is None:
+            if msg is not None and msg != "":
+                self.messages.append(
+                    {
+                        "role": role,
+                        "content": msg,
+                    }
+                )
+        else:
+            self.messages.append(self._format_tool_result(msg, role, tool))
 
     async def chat(
-        self, msg: str, tool: Optional[str] = None
+        self, msg: str, tool: Optional[ToolCall] = None
     ) -> Iterator[ChatResponse]:
         """
         Handle chat message, if `tool` is set then the message is the result
@@ -279,22 +298,23 @@ class ChatProvider:
         return self.tools
 
     async def call_tool(
-        self, name: str, input: object, tool_call_id: str | None = None, **kw
+        self, name: str, args: object, tool_use_id: str | None = None, **kw
     ) -> Iterator[ChatResponse]:
         """
         Call a tool by name with the given input, the extra arguments are passed to
         `Client.call_tool`
         """
-        if isinstance(input, str):
-            input = json.loads(input)
-        self.logger.info(f"Calling tool: {name} with input: {input}")
+        if isinstance(args, str):
+            args = json.loads(args)
+        self.logger.info(f"Calling tool: {name} with input: {args}")
+        tool = ToolCall(id=tool_use_id, name=name, input=args)
         try:
             # Handle builtin tools
             if name in ["mcp_run_search_servlets"]:
                 x = []
-                if input["q"] == "":
+                if args["q"] == "":
                     return
-                for r in self.config.client.search(input["q"]):
+                for r in self.config.client.search(args["q"]):
                     x.append(
                         {
                             "slug": r.slug,
@@ -306,9 +326,10 @@ class ChatProvider:
                 yield ChatResponse(
                     role="tool",
                     content=f"Search results: {c}",
-                    tool=ToolCall(name=name, input=input, id=tool_call_id),
+                    tool=tool,
                 )
-                async for res in self.chat(c, tool=name):
+                self.append_message(c, tool=tool)
+                async for res in self.chat(""):
                     yield res
                 return
             elif name in ["mcp_run_get_profiles"]:
@@ -327,42 +348,35 @@ class ChatProvider:
                 yield ChatResponse(
                     role="tool",
                     content=f"Profiles found: {c}",
-                    tool=ToolCall(name=name, input=input, id=tool_call_id),
+                    tool=tool,
                 )
-                async for res in self.chat(c, tool=name):
+                self.append_message(c, tool=tool)
+                async for res in self.chat(""):
                     yield res
                 return
             elif name in ["mcp_run_set_profile"]:
-                profile = input["profile"]
+                profile = args["profile"]
                 c = f"Active profile set to {profile}"
                 yield ChatResponse(
                     role="tool",
                     content=c,
-                    tool=ToolCall(name=name, input=input, id=tool_call_id),
+                    tool=tool,
                 )
-                async for res in self.chat(c, tool=name):
+                self.append_message(c, tool=tool)
+                async for res in self.chat(""):
                     yield res
                 return
 
-            res = self.config.client.call_tool(tool=name, params=input, **kw)
+            res = self.config.client.call_tool(tool=name, params=args, **kw)
             for c in res.content:
                 if c.type == "text":
                     yield ChatResponse(
                         role="tool",
                         content=c.text,
-                        tool=ToolCall(name=name, input=input, id=tool_call_id),
+                        tool=tool,
                     )
-                    id = ""
-                    if tool_call_id is not None:
-                        id = f"(id = {tool_call_id})"
-                    async for res in self.chat(
-                        f"""
-                        The result of the {name} {id} tool is: {c.text}
-                        
-                        Let's continue to the next step in the task, or respond with the result to the user if it is the final step
-                        """,
-                        tool=name,
-                    ):
+                    self.append_message(c.text, tool=tool)
+                    async for res in self.chat(""):
                         yield res
                 elif c.type == "image":
                     ext = ".jpg"
@@ -376,20 +390,24 @@ class ChatProvider:
                             role="tool",
                             content=tmp.name,
                             kind="image",
-                            tool=ToolCall(name=name, input=input, id=tool_call_id),
+                            tool=tool,
+                        )
+                        self.append_message(
+                            f"File written to {tmp.name}",
+                            tool=tool,
                         )
         except Exception:
             s = traceback.format_exc()
             yield ChatResponse(
                 role="tool",
                 content=s,
-                tool=ToolCall(name=name, input=input, id=tool_call_id),
+                tool=tool,
                 _error=True,
             )
             async for res in self.chat(
                 f"Encountered an error when calling tool \
-                            {name}, debug this then continue the original task: {s}",
-                tool=name,
+                            {name} {tool_use_id}, debug this then continue the original task: {s}",
+                tool=ToolCall(name=name, input=args, id=tool_use_id),
             ):
                 yield res
 
@@ -415,15 +433,23 @@ class Ollama(ChatProvider):
         }
 
     @staticmethod
+    def _format_tool_result(msg: str, role: str, tool: ToolCall):
+        return {
+            "role": "tool",
+            "content": f"Result of tool name={tool.name} id={tool.id} result={msg}",
+        }
+
+    @staticmethod
     def _default_provider_client(config):
         return OllamaClient(host=config.base_url)
 
     async def chat(
-        self, msg: str, tool: Optional[str] = None
+        self, msg: str, tool: Optional[ToolCall] = None
     ) -> Iterator[ChatResponse]:
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
-        self.append_message(msg, role="user" if tool is None else "tool", tool=tool)
+        if msg != "" or tool is not None:
+            self.append_message(msg, tool=tool)
         response: OllamaChatResponse = self.provider_client.chat(
             model=self.config.model,
             stream=False,
@@ -432,10 +458,17 @@ class Ollama(ChatProvider):
             format=self.config.format,
         )
         self.logger.debug("Response:", response)
+        x = response.message.dict()
+        d = {
+            "role": x["role"],
+        }
+        if x["tool_calls"]:
+            d["tool_calls"] = x["tool_calls"]
+        if x["content"]:
+            d["content"] = x["content"]
+        self.messages.append(d)
         content = response.message.content
-        if content is not None and content != "":
-            self.append_message(content, role="assistant")
-            yield ChatResponse(role="assistant", content=content, original=response)
+        yield ChatResponse(role="assistant", content=content, original=response)
         if response.message.tool_calls is not None:
             for call in response.message.tool_calls:
                 f = call.function.arguments
@@ -467,32 +500,51 @@ class OpenAI(ChatProvider):
     def _default_provider_client(config):
         return OpenAIClient(base_url=config.base_url, api_key=config.api_key)
 
+    @staticmethod
+    def _format_tool_result(msg: str, role: str, tool: ToolCall):
+        return {
+            "role": "tool",
+            "tool_call_id": tool.id,
+            "content": [
+                {
+                    "type": "text",
+                    "content": f"Result of tool name={tool.name} id={tool.id} result={msg}",
+                }
+            ],
+        }
+
     async def chat(
-        self, msg: str, tool: Optional[str] = None
+        self, msg: str, tool: Optional[ToolCall] = None
     ) -> Iterator[ChatResponse]:
         if len(self.messages) == 0:
             self.append_message(self.config.system, role="system")
-        self.append_message(msg, tool=tool)
+        if msg != "" or tool is not None:
+            self.append_message(msg, tool=tool)
         r = self.provider_client.chat.completions.create(
             messages=self.messages,
             model=self.config.model,
             tools=[self._convert_tool(t) for t in self.tools],
             max_completion_tokens=self.config.max_tokens,
+            response_format=self.config.format,
         )
         for response in r.choices:
-            self.logger.debug("Response", response)
+            self.logger.debug("Response " + str(response))
+            x = response.message.dict()
+            d = {
+                "role": x["role"],
+            }
+            if x["content"]:
+                d["content"] = x["content"]
+            if x["tool_calls"]:
+                d["tool_calls"] = x["tool_calls"]
+            self.messages.append(d)
             content = response.message.content
-            if content is not None and content != "":
-                self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content, original=response)
-            if (
-                response.message.tool_calls is not None
-                and response.finish_reason == "tool_calls"
-            ):
+            yield ChatResponse(role="assistant", content=content, original=response)
+            if response.message.tool_calls is not None:
                 for call in response.message.tool_calls:
                     f = call.function.arguments
                     async for res in self.call_tool(
-                        call.function.name, f, tool_call_id=id
+                        call.function.name, f, tool_use_id=call.id
                     ):
                         yield res
 
@@ -508,51 +560,6 @@ class Gemini(OpenAI):
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=os.environ.get("GEMINI_API_KEY", config.api_key),
         )
-
-    async def chat(
-        self, msg: str, tool: Optional[str] = None
-    ) -> Iterator[ChatResponse]:
-        if len(self.messages) == 0:
-            self.append_message(self.config.system, role="system")
-        self.append_message(msg, tool=tool)
-        r = self.provider_client.chat.completions.create(
-            messages=self.messages,
-            model=self.config.model,
-            tools=[self._convert_tool(t) for t in self.tools],
-            max_tokens=self.config.max_tokens,
-        )
-        for response in r.choices:
-            self.logger.debug(response)
-            if response.message is None:
-                continue
-            content = response.message.content
-            if content is not None and content != "":
-                self.append_message(content, role="assistant")
-                yield ChatResponse(role="assistant", content=content, original=response)
-
-            if response.message.tool_calls is not None:
-                for call in response.message.tool_calls:
-                    f = call.function.arguments
-                    id = call.id
-                    async for res in self.call_tool(
-                        call.function.name, f, tool_call_id=id
-                    ):
-                        yield res
-
-            # TODO: remove this, checking `toolCalls` is only required for now because of a bug
-            # in the Gemini OpenAI compatiblitiy
-            # see https://discuss.ai.google.dev/t/two-tool-calling-bugs-i-found-in-openai-compatibility-beta/58174
-            if (
-                hasattr(response.message, "toolCalls")
-                and response.message.toolCalls is not None
-            ):
-                for call in response.message.toolCalls:
-                    f = call["function"]["arguments"]
-                    id = call.get("id")
-                    async for res in self.call_tool(
-                        call["function"]["name"], f, tool_call_id=id
-                    ):
-                        yield res
 
 
 class Claude(ChatProvider):
@@ -576,10 +583,24 @@ class Claude(ChatProvider):
     def _default_provider_client(config):
         return AsyncAnthropic(base_url=config.base_url, api_key=config.api_key)
 
+    @staticmethod
+    def _format_tool_result(msg: str, role: str, tool: ToolCall):
+        return {
+            "role": role,
+            "content": [
+                {
+                    "tool_use_id": tool.id,
+                    "type": "tool_result",
+                    "content": msg or "",
+                }
+            ],
+        }
+
     async def chat(
-        self, msg: str, tool: Optional[str] = None
+        self, msg: str, tool: Optional[ToolCall] = None
     ) -> Iterator[ChatResponse]:
-        self.append_message(msg, tool=tool)
+        if msg != "" or tool is not None:
+            self.append_message(msg, tool=tool)
         res = await self.provider_client.messages.create(
             max_tokens=self.config.max_tokens,
             messages=self.messages,
@@ -587,15 +608,21 @@ class Claude(ChatProvider):
             tools=[self._convert_tool(t) for t in self.tools],
             system=self.config.system,
         )
+        d = res.dict()
+        self.messages.append(
+            {
+                "role": d["role"],
+                "content": d["content"] or "",
+            }
+        )
         for block in res.content:
             self.logger.debug(block)
             if block.type == "tool_use" and res.stop_reason == "tool_use":
                 async for res in self.call_tool(
-                    block.name, block.input, tool_call_id=block.id
+                    block.name, block.input, tool_use_id=block.id
                 ):
                     yield res
             elif block.type == "text":
-                self.append_message(block.text, role="assistant")
                 yield ChatResponse(role="assistant", content=block.text, original=res)
 
 
@@ -663,6 +690,7 @@ class Chat:
         gen = self.send_message(msg)
         while True:
             try:
-                yield asyncio.run(gen.__anext__())
+                res = asyncio.run(gen.__anext__())
+                yield res
             except StopAsyncIteration:
                 break

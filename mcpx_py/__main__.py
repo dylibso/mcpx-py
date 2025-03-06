@@ -100,10 +100,8 @@ async def chat_loop(chat):
                     ">>",
                     f"Input: {res.tool.input}",
                 )
-                print(
-                    ">>",
-                    f"Result: {res.content}",
-                )
+                if res.content:
+                    chat.logger.debug(f"Result: {res.content}")
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True
@@ -116,7 +114,7 @@ async def chat_cmd(client, args):
         base_url=args.url,
         system=args.system,
         format=args.format,
-        ignore_tools=args.ignore
+        ignore_tools=args.ignore,
     )
     provider = None
     if args.provider == "ollama":
@@ -207,7 +205,9 @@ def main():
         default="claude",
         help="LLM provider",
     )
-    chat_parser.add_argument("--ignore", "-x", default=[], action="append", help="Tools to ignore")
+    chat_parser.add_argument(
+        "--ignore", "-x", default=[], action="append", help="Tools to ignore"
+    )
     chat_parser.add_argument("--url", "-u", default=None, help="Provider endpoint URL")
     chat_parser.add_argument("--model", default=None, help="Model name")
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
