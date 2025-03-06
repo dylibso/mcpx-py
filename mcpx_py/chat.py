@@ -74,12 +74,17 @@ class Chat:
         **kw,
     ):
         self.config = config
+
+        if "system_prompt" not in kw:
+            kw["system_prompt"] = config.system
+
+        if "result_type" not in kw:
+            kw["result_type"] = config.format
+        
         self.agent = Agent(
             config.model,
             client=config.client,
-            system_prompt=config.system,
             ignore_tools=config.ignore_tools,
-            result_type=config.format,
             *args,
             **kw,
         )
