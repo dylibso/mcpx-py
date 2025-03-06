@@ -1,28 +1,19 @@
 import asyncio
-from mcpx_py import Chat, Claude
+from mcpx_py import Chat, ChatConfig
 
 
-# Using ChatProvider.chat requires async, so we'll wrap this in an
+# Using Chat.send_message requires async, so we'll wrap this in an
 # async function
 async def main():
     # Connect to the Claude API, this also creates an mcp.run client
-    llm = Chat(Claude)
+    llm = Chat(ChatConfig(model="claude-3-5-sonnet-latest"))
 
-    # Or OpenAI
-    # from mcpx import OpenAI
-    # llm = Chat(OpenAI)
+    # Prompt and print the results
+    response = await llm.send_message("summarize the contents of example.com")
+    print(response.data)
+    response = await llm.send_message("without refetching the contents, what are the first and last lines on that page?")
+    print(response.data)
 
-    # Or Ollama
-    # from mcpx import Ollama
-    # llm = Chat(Ollama)
-
-    # Or Gemini
-    # from mcpx import Gemini
-    # llm = Chat(Gemini)
-
-    # Prompt claude and iterate over the results
-    async for response in llm.send_message("summarize the contents of example.com"):
-        print(response)
 
 
 if __name__ == "__main__":

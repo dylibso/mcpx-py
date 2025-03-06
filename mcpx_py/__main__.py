@@ -10,9 +10,10 @@ import logging
 
 from dotenv import load_dotenv
 
-from . import Claude, OpenAI, Ollama, ChatConfig, Gemini, Chat
+from . import ChatConfig, Chat
 from mcp_run import Client, ClientConfig
 from .chat import SYSTEM_PROMPT
+from ollama import Client as OllamaClient
 
 CHAT_HELP = """
 Available commands:
@@ -72,13 +73,12 @@ async def chat_loop(chat):
                 print("Chat history cleared")
                 return True
             elif msg == "!tools":
-                tools = chat.provider.get_tools()
                 print("\nAvailable tools:")
-                for tool in tools:
+                for tool in chat.agent._function_tools.values():
                     if tool is None:
                         continue
-                    print(f"- {tool.name}")
-                    print(f"\t{tool.description}")
+                    print(f"- {tool.name.strip()}")
+                    print(f"\t{tool.description.strip()}")
                 return True
             elif msg.startswith("!sh "):
                 os.system(msg[4:])
@@ -88,51 +88,30 @@ async def chat_loop(chat):
                 return False
         if msg == "":
             return True
-        async for res in chat.send_message(msg):
-            if res.role == "assistant":
-                print(">>", res.content)
-            elif res.role == "tool":
-                print(
-                    ">>",
-                    f"Calling {res.tool.name}",
-                )
-                print(
-                    ">>",
-                    f"Input: {res.tool.input}",
-                )
-                print(
-                    ">>",
-                    f"Result: {res.content}",
-                )
+        res = await chat.send_message(msg)
+        print(res.data)
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True
 
 
 async def chat_cmd(client, args):
+    m = args.model
+    if args.provider:
+        m = f"{args.provider}:{m}"
     config = ChatConfig(
         client=client,
-        model=args.model,
-        base_url=args.url,
+        model=m,
         system=args.system,
-        format=args.format,
-        ignore_tools=args.ignore
+        format=eval(args.format),
+        ignore_tools=args.ignore,
     )
-    provider = None
-    if args.provider == "ollama":
-        provider = Ollama(config)
-    elif args.provider == "claude":
-        provider = Claude(config)
-    elif args.provider == "openai":
-        provider = OpenAI(config)
-    elif args.provider == "gemini":
-        provider = Gemini(config)
 
     if args.provider == "ollama" and args.pull:
         print(f">> Pulling {config.model}")
-        provider.provider_client.pull(model=config.model, stream=False)
+        OllamaClient().pull(model=config.model, stream=False)
 
-    chat = Chat(provider)
+    chat = Chat(config)
 
     while True:
         ok = await chat_loop(chat)
@@ -203,15 +182,17 @@ def main():
     chat_parser.add_argument(
         "--provider",
         "-p",
-        choices=["ollama", "claude", "openai", "gemini"],
-        default="claude",
+        default=None,
         help="LLM provider",
     )
-    chat_parser.add_argument("--ignore", "-x", default=[], action="append", help="Tools to ignore")
-    chat_parser.add_argument("--url", "-u", default=None, help="Provider endpoint URL")
-    chat_parser.add_argument("--model", default=None, help="Model name")
+    chat_parser.add_argument(
+        "--ignore", "-x", default=[], action="append", help="Tools to ignore"
+    )
+    chat_parser.add_argument(
+        "--model", default="claude-3-5-sonnet-latest", help="Model name"
+    )
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
-    chat_parser.add_argument("--format", default="", help="Output format")
+    chat_parser.add_argument("--format", default="str", help="Output format")
     chat_parser.add_argument(
         "--pull", action="store_true", help="Pull the model before running, Ollama only"
     )
