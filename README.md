@@ -6,12 +6,7 @@ A Python library for interacting with LLMs using mcp.run tools
 ## Features
 
 ### AI Provider Support
-- **Ollama**: https://ollama.com/
-- **Claude**: https://www.anthropic.com/api
-- **OpenAI**: https://openai.com/api/
-- **Gemini**: https://ai.google.dev/
-- **Llamafile**: https://github.com/Mozilla-Ocho/llamafile
-  - See [Llamafile JSON API setup](https://github.com/Mozilla-Ocho/llamafile?tab=readme-ov-file#json-api-quickstart)
+`mcpx-py` supports all models supported by [PydanticAI](https://ai.pydantic.dev/models/)
 
 ### Interactive Features
 - Real-time chat interface with AI models
@@ -74,27 +69,24 @@ pip install mcpx-py
 ### Example code
 
 ```python
-from mcpx_py import Chat, Claude
+from mcpx_py import Chat
 
-llm = Chat(Claude)
+llm = Chat("claude-3-5-sonnet-latest")
 
 # Or OpenAI
-# from mcpx import OpenAI
-# llm = Chat(OpenAI)
+# llm = Chat("gpt-4o")
 
 # Or Ollama
-# from mcpx import Ollama
-# llm = Chat(Ollama)
+# llm = Chat("ollama:qwen2.5")
 
 # Or Gemini
-# from mcpx import Gemini
-# llm = Chat(Gemini)
+# llm = Chat("gemini-2.0-flash")
 
 # Prompt claude and iterate over the results
-async for response in llm.send_message(
+response = llm.send_message(
     "summarize the contents of example.com"
-):
-    print(response)
+)
+print(response.data)
 ```
 
 More examples can be found in the [examples/](https://github.com/dylibso/mcpx-py/tree/main/examples) directory

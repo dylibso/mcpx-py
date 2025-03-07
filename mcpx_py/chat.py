@@ -70,10 +70,12 @@ class Chat:
 
     def __init__(
         self,
-        config: ChatConfig,
+        config: ChatConfig | str,
         *args,
         **kw,
     ):
+        if not isinstance(config, ChatConfig):
+            config = ChatConfig(model=config)
         self.config = config
 
         if "system_prompt" not in kw:

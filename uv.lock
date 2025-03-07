@@ -532,6 +532,7 @@ dependencies = [
     { name = "mcpx-pydantic-ai" },
     { name = "ollama" },
     { name = "psutil" },
+    { name = "pydantic-ai" },
     { name = "python-dotenv" },
 ]
 
@@ -544,9 +545,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcpx-pydantic-ai", specifier = ">=0.3.3" },
+    { name = "mcpx-pydantic-ai", git = "https://github.com/dylibso/mcpx-pydantic-ai" },
     { name = "ollama", specifier = ">=0.4.2" },
     { name = "psutil", specifier = ">=7.0.0" },
+    { name = "pydantic-ai", specifier = ">=0.0.35" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
 
@@ -559,16 +561,12 @@ dev = [
 
 [[package]]
 name = "mcpx-pydantic-ai"
-version = "0.3.3"
-source = { registry = "https://pypi.org/simple" }
+version = "0.4.0"
+source = { git = "https://github.com/dylibso/mcpx-pydantic-ai#741e1dec18073d24ebefedb47cf4714c313a5684" }
 dependencies = [
     { name = "mcp-run" },
     { name = "pydantic" },
     { name = "pydantic-ai" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8c/71/4ae04a5e1ac02368f1316952673e2f288acf6d61e11004eaafad74c2df5d/mcpx_pydantic_ai-0.3.3.tar.gz", hash = "sha256:3ecc0d8a04baab12659b90c62ed6b46228bf0f02cb43d42d649d65c590d4cb0d", size = 2532 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/94/6ef6c1e748ad36216b3437666898eae07e50f0661c18cd02adf9521680c1/mcpx_pydantic_ai-0.3.3-py3-none-any.whl", hash = "sha256:c085cb24b0432d0c3d808de1fcc652aa02143d71c72b0d19126736b409f71292", size = 2562 },
 ]
 
 [[package]]

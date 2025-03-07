@@ -8,6 +8,7 @@ dependencies = [
     "mcpx-pydantic-ai>=0.3.3",
     "ollama>=0.4.2",
     "psutil>=7.0.0",
+    "pydantic-ai>=0.0.35",
     "python-dotenv>=1.0.1",
 ]
 
@@ -18,6 +19,9 @@ dev-dependencies = [
     "python-lsp-server>=1.12.0",
     "ruff>=0.8.1",
 ]
+
+[tool.uv.sources]
+mcpx-pydantic-ai = { git = "https://github.com/dylibso/mcpx-pydantic-ai" }
 
 [project.scripts]
 mcpx-client = "mcpx_py.__main__:main"
