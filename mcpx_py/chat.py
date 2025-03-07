@@ -186,13 +186,16 @@ class Chat:
     ):
         q = input.get("q", "")
         if q == "":
-            return
+            return "ERROR: provide a query when searching"
         x = []
         for r in self.config.client.search(input["q"]):
             x.append(
                 {
                     "slug": r.slug,
-                    "meta": r.meta,
+                    "schema": {
+                        "name": r.meta.get("name"),
+                        "description": r.meta.get("description"),
+                    },
                     "installation_count": r.installation_count,
                 }
             )
