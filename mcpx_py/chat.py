@@ -22,72 +22,23 @@ SYSTEM_PROMPT = """
 """
 
 
-@dataclass
-class ChatConfig:
-    """
-    Stores configuration and session for chats
-    """
-
-    client: mcp_run.Client | None = None
-    """
-    mcp.run client
-    """
-
-    model: str | pydantic_ai.models.KnownModelName | None = None
-    """
-    Model name, if set to `None` then a default model will be selected
-    """
-
-    system: str = SYSTEM_PROMPT
-    """
-    System prompt
-    """
-
-    format: type = str
-    """
-    Output format
-    """
-
-    model_settings: pydantic_ai.agent.ModelSettings | None = None
-    """
-    Configure model-specifc settings
-    """
-
-    ignore_tools: List[str] | None = None
-    """
-    A list of tool names to ignore
-    """
-
-
 class Chat:
     """
     LLM chat
     """
 
     agent: Agent
-    config: ChatConfig
     history: list
 
     def __init__(
         self,
-        config: ChatConfig | str,
         *args,
         **kw,
     ):
-        if not isinstance(config, ChatConfig):
-            config = ChatConfig(model=config)
-        self.config = config
-
         if "system_prompt" not in kw:
-            kw["system_prompt"] = config.system
-
-        if "result_type" not in kw:
-            kw["result_type"] = config.format
+            kw["system_prompt"] = SYSTEM_PROMPT
 
         self.agent = Agent(
-            config.model,
-            client=config.client,
-            ignore_tools=config.ignore_tools,
             *args,
             **kw,
         )
@@ -188,7 +139,7 @@ class Chat:
         if q == "":
             return "ERROR: provide a query when searching"
         x = []
-        for r in self.config.client.search(input["q"]):
+        for r in self.agent.client.search(input["q"]):
             x.append(
                 {
                     "slug": r.slug,
@@ -203,7 +154,7 @@ class Chat:
 
     def _tool_mcp_run_get_profiles(self, input: TypedDict("GetProfile", {})):
         p = []
-        for user, u in self.config.client.profiles.items():
+        for user, u in self.agent.client.profiles.items():
             if user == "~":
                 continue
             for profile in u.values():
@@ -226,4 +177,4 @@ class Chat:
         return f"Active profile set to {profile}"
 
     def _tool_mcp_run_current_profile(self, input):
-        return self.client.config.profile
+        return self.agent.client.config.profile

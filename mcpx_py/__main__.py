@@ -11,10 +11,9 @@ import logging
 
 from dotenv import load_dotenv
 
-from . import ChatConfig, Chat
+from . import Chat
 from mcp_run import Client, ClientConfig
 from .chat import SYSTEM_PROMPT
-from ollama import Client as OllamaClient
 import pydantic_ai
 
 CHAT_HELP = """
@@ -98,9 +97,12 @@ async def chat_loop(chat):
                 if isinstance(part, pydantic_ai.messages.TextPart):
                     print(part.content)
                 elif isinstance(part, pydantic_ai.messages.ToolCallPart):
-                    print(
-                        f">> Tool: {part.tool_name} ({part.tool_call_id}) input={part.args}"
-                    )
+                    if part.tool_name == "final_result":
+                        print(part.args["response"])
+                    else:
+                        print(
+                            f">> Tool: {part.tool_name} ({part.tool_call_id}) input={part.args}"
+                        )
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True
@@ -110,19 +112,14 @@ async def chat_cmd(client, args):
     m = args.model
     if args.provider:
         m = f"{args.provider}:{m}"
-    config = ChatConfig(
+
+    chat = Chat(
+        m,
         client=client,
-        model=m,
-        system=args.system,
-        format=eval(args.format),
+        system_prompt=args.system,
+        result_type=args.format,
         ignore_tools=args.ignore,
     )
-
-    if args.provider == "ollama" and args.pull:
-        print(f">> Pulling {config.model}")
-        OllamaClient().pull(model=config.model, stream=False)
-
-    chat = Chat(config)
 
     while True:
         ok = await chat_loop(chat)
@@ -204,9 +201,6 @@ def main():
     )
     chat_parser.add_argument("--system", default=SYSTEM_PROMPT, help="System prompt")
     chat_parser.add_argument("--format", default="str", help="Output format")
-    chat_parser.add_argument(
-        "--pull", action="store_true", help="Pull the model before running, Ollama only"
-    )
 
     # Run
     asyncio.run(run(args.parse_args()))

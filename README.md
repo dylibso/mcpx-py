@@ -6,12 +6,8 @@ A Python library for interacting with LLMs using mcp.run tools
 ## Features
 
 ### AI Provider Support
-`mcpx-py` supports all models supported by [PydanticAI](https://ai.pydantic.dev/models/)
 
-### Interactive Features
-- Real-time chat interface with AI models
-- Tool suggestion and execution within conversations
-- Support for both local and cloud-based AI providers
+`mcpx-py` supports all models supported by [PydanticAI](https://ai.pydantic.dev/models/)
 
 ## Dependencies
 
@@ -82,8 +78,28 @@ llm = Chat("claude-3-5-sonnet-latest")
 # Or Gemini
 # llm = Chat("gemini-2.0-flash")
 
-# Prompt claude and iterate over the results
-response = llm.send_message(
+response = llm.send_message_sync(
+    "summarize the contents of example.com"
+)
+print(response.data)
+```
+
+It's also possible to get structured output by setting `result_type`
+
+```python
+from mcpx_py import Chat, BaseModel, Field
+from typing import List
+
+class Summary(BaseModel):
+    """
+    A summary of some longer text
+    """
+    source: str = Field("The source of the original_text")
+    original_text: str = Field("The original text to be summarized")
+    items: List[str] = Field("A list of summary points")
+
+llm = Chat("claude-3-5-sonnet-latest", result_type=Summary)
+response = llm.send_message_sync(
     "summarize the contents of example.com"
 )
 print(response.data)
