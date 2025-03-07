@@ -8,7 +8,7 @@ class Summary(BaseModel):
     A summary of some longer text
     """
 
-    source: str = Field("The source of the original_text")
+    source: str = Field("The source of the original text")
     items: List[str] = Field("A list of summary points")
     first_line: str = Field("The first line from the original text")
     last_line: str = Field("The last line from the original text")
