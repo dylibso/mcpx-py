@@ -1,8 +1,7 @@
-from mcpx_pydantic_ai import Agent, pydantic_ai, mcp_run
+from mcpx_pydantic_ai import Agent, pydantic_ai
 
 
-from dataclasses import dataclass
-from typing import List, TypedDict
+from typing import TypedDict
 
 from . import builtin_tools
 
@@ -132,14 +131,14 @@ class Chat:
             res = await self.send_message(msg, *args, **kw)
         return res, messages
 
-    def _tool_mcp_run_search_servlets(
+    async def _tool_mcp_run_search_servlets(
         self, input: TypedDict("SearchServlets", {"q": str})
     ):
         q = input.get("q", "")
         if q == "":
             return "ERROR: provide a query when searching"
         x = []
-        for r in self.agent.client.search(input["q"]):
+        for r in await self.agent.client.search(input["q"]):
             x.append(
                 {
                     "slug": r.slug,
@@ -160,7 +159,7 @@ class Chat:
             for profile in u.values():
                 p.append(
                     {
-                        "name": f"{user}/{profile.slug.name}",
+                        "name": f"{user}/{profile.slug}",  # Assume slug is string
                         "description": profile.description,
                     }
                 )
@@ -170,11 +169,11 @@ class Chat:
         self, input: TypedDict("SetProfile", {"profile": str})
     ):
         profile = input["profile"]
-        self.agent.client.logger.info("Setting profile to {profile}")
         if "/" not in profile:
             profile = "~/" + profile
         self.agent.set_profile(profile)
         return f"Active profile set to {profile}"
 
-    def _tool_mcp_run_current_profile(self, input):
+    def _tool_mcp_run_current_profile(self, input: TypedDict("CurrentProfile", {})):
+        """Get current profile name"""
         return self.agent.client.config.profile
