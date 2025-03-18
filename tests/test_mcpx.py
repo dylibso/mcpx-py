@@ -52,7 +52,19 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
         self.mock_session = patcher.start()
         self.addCleanup(patcher.stop)
 
-        # Create chat instance after mock is in place
+        # Mock the list_installs response to prevent unauthorized errors
+        # Create a mock client with empty tools/installs
+        mock_client = MagicMock()
+        mock_client.tools = {}
+        mock_client.installs = []
+        mock_client.list_installs = MagicMock(return_value=[])
+
+        # Path the Client class to return our mock
+        patcher = patch("mcpx_pydantic_ai.mcp_run.Client", return_value=mock_client)
+        self.mock_client = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        # Create chat instance after mocks are in place
         with patch("mcpx_py.chat.pydantic_ai", autospec=True) as mock_pydantic_ai:
             # Configure the mock for capturing run messages
             mock_messages = []
