@@ -14,6 +14,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+    env:
+      MCP_RUN_SESSION_ID: test-session
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3

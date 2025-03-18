@@ -47,12 +47,12 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
         """Setup test with mocked dependencies"""
         self.maxDiff = None
 
-        # Mock the config module to prevent session ID errors
+        # Mock the config module to prevent session ID errors - do this before any initialization
         patcher = patch("mcp_run.config._default_session_id", return_value="test-session")
-        patcher.start()
+        self.mock_session = patcher.start()
         self.addCleanup(patcher.stop)
 
-        # Create chat instance without real init
+        # Create chat instance after mock is in place
         with patch("mcpx_py.chat.pydantic_ai", autospec=True) as mock_pydantic_ai:
             # Configure the mock for capturing run messages
             mock_messages = []
@@ -61,6 +61,7 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
             mock_messages_ctx.__exit__ = MagicMock(return_value=None)
             mock_pydantic_ai.capture_run_messages.return_value = mock_messages_ctx
 
+            # Create chat instance once mocks are in place
             self.chat = Chat()
 
             # Create agent mock with proper coroutine support
