@@ -47,6 +47,11 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
         """Setup test with mocked dependencies"""
         self.maxDiff = None
 
+        # Mock the config module to prevent session ID errors
+        patcher = patch("mcp_run.config._default_session_id", return_value="test-session")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
         # Create chat instance without real init
         with patch("mcpx_py.chat.pydantic_ai", autospec=True) as mock_pydantic_ai:
             # Configure the mock for capturing run messages
