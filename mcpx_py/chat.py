@@ -131,14 +131,14 @@ class Chat:
             res = await self.send_message(msg, *args, **kw)
         return res, messages
 
-    async def _tool_mcp_run_search_servlets(
+    def _tool_mcp_run_search_servlets(
         self, input: TypedDict("SearchServlets", {"q": str})
     ):
         q = input.get("q", "")
         if q == "":
             return "ERROR: provide a query when searching"
         x = []
-        for r in await self.agent.client.search(input["q"]):
+        for r in self.agent.client.search(input["q"]):
             x.append(
                 {
                     "slug": r.slug,
