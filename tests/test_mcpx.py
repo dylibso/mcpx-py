@@ -1,10 +1,7 @@
 import unittest
-
-<<<<<<< Updated upstream
-class TestMcpx(unittest.TestCase):
-    def test_basic(self):
-        pass
-=======
+from unittest.mock import MagicMock, patch, AsyncMock
+from mcpx_py.chat import Chat
+from mcpx_py.builtin_tools import TOOLS
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,7 +47,9 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
         self.maxDiff = None
 
         # Mock the config module to prevent session ID errors - do this before any initialization
-        patcher = patch("mcp_run.config._default_session_id", return_value="test-session")
+        patcher = patch(
+            "mcp_run.config._default_session_id", return_value="test-session"
+        )
         self.mock_session = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -202,7 +201,8 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
         """Test profile listing tool"""
         # Create mock profile
         mock_profile = MagicMock()
-        mock_profile.slug = "profile1"
+        mock_profile.slug = MagicMock()
+        mock_profile.slug.name = "profile1"
         mock_profile.description = "Test profile 1"
 
         # Mock profiles dictionary
@@ -327,4 +327,3 @@ class TestMcpx(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
->>>>>>> Stashed changes
