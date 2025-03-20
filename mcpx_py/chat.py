@@ -31,6 +31,7 @@ class Chat:
 
     def __init__(
         self,
+        ignore_builtin_tools: bool = False,
         *args,
         **kw,
     ):
@@ -41,7 +42,8 @@ class Chat:
             *args,
             **kw,
         )
-        self._register_builtins()
+        if not ignore_builtin_tools:
+            self._register_builtins()
         self.history = []
 
     def _register_builtins(self):
