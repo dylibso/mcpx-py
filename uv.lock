@@ -611,7 +611,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcpx-pydantic-ai", specifier = ">=0.4.0" },
+    { name = "mcpx-pydantic-ai", specifier = ">=0.5.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
@@ -625,16 +625,16 @@ dev = [
 
 [[package]]
 name = "mcpx-pydantic-ai"
-version = "0.4.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mcp-run" },
     { name = "pydantic" },
     { name = "pydantic-ai" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/75/881f7ecc317d486020bef378527c4bd9a6bc074faaed73d3bd4749c13bcf/mcpx_pydantic_ai-0.4.0.tar.gz", hash = "sha256:99852eec3bdc66a93dcc9c9a4c6cca3b898dc7c0f553069b4a64027b070ccc87", size = 2680 }
+sdist = { url = "https://files.pythonhosted.org/packages/df/00/dbf62ef8872a3837e9fd800582b81c864bc7d5f4d169a358b0ccfd678d40/mcpx_pydantic_ai-0.5.0.tar.gz", hash = "sha256:43bcfd7c593748bf994240edd45f27ac24812687b7fc9dcd3b7f54fe4d6573d8", size = 3797 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/c6/b150787ecc239eb1ed6ae7719619aaf449e80a6bcc87f4577159a5c9351e/mcpx_pydantic_ai-0.4.0-py3-none-any.whl", hash = "sha256:1d42e4b0227a591229773aeedcfad49f3aba51e712d73deab4a5306317e94c45", size = 2711 },
+    { url = "https://files.pythonhosted.org/packages/54/a0/862b5a5ce5b968a254b3c8e71c1c4e37a8eec99aa3485488bc9cfe0d66e7/mcpx_pydantic_ai-0.5.0-py3-none-any.whl", hash = "sha256:840311610c358aa38a80528a97a56972f2f9f461f1510e47a56931db52dbe4ff", size = 2716 },
 ]
 
 [[package]]

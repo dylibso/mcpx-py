@@ -5,7 +5,7 @@ description = "An mcp.run client for Python"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcpx-pydantic-ai>=0.4.0",
+    "mcpx-pydantic-ai>=0.5.0",
     "psutil>=7.0.0",
     "python-dotenv>=1.0.1",
 ]
