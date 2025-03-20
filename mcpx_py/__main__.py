@@ -136,7 +136,7 @@ def killtree(pid):
 async def run(args):
     # Setup command history
     histfile = os.path.join(
-        os.environ.get("XTP_PLUGIN_CACHE_DIR", "."), ".mcpx-client-history"
+        os.environ.get("XTP_PLUGIN_CACHE_DIR", "/tmp"), ".mcpx-client-history"
     )
     try:
         os.makedirs(os.path.dirname(histfile), exist_ok=True)
