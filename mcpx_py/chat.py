@@ -31,8 +31,8 @@ class Chat:
 
     def __init__(
         self,
-        ignore_builtin_tools: bool = False,
         *args,
+        ignore_builtin_tools: bool = False,
         **kw,
     ):
         if "system_prompt" not in kw:
@@ -122,6 +122,8 @@ class Chat:
                         content = node.model_request
                     elif hasattr(node, "data"):
                         content = node.data
+                    else:
+                        continue
                     yield content
         self.history.extend(messages)
 
