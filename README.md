@@ -132,6 +132,12 @@ uv tool install .
 mcpx-client can also be executed without being installed using `uvx`:
 
 ```sh
+uvx --from mcpx-py mcpx-client
+```
+
+Or from git:
+
+```sh
 uvx --from git+https://github.com/dylibso/mcpx-py mcpx-client
 ```
 
