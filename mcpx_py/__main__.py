@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from . import Chat
 from mcp_run import Client, ClientConfig
+from mcpx_pydantic_ai import openai_compatible_model
 from .chat import SYSTEM_PROMPT
 import pydantic_ai
 
@@ -111,7 +112,19 @@ async def chat_loop(chat):
 async def chat_cmd(client, args):
     m = args.model
     if args.provider:
-        m = f"{args.provider}:{m}"
+        if args.provider == "ollama" or args.provider == "llama":
+            host = os.environ.get(
+                f"{args.model.upper()}_HOST",
+                os.environ.get(
+                    "LLAMA_HOST",
+                    os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434"),
+                ),
+            )
+            if not host.endswith("/v1"):
+                host += "/v1"
+            m = openai_compatible_model(host, args.model)
+        else:
+            m = f"{args.provider}:{m}"
 
     chat = Chat(
         m,
