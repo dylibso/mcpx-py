@@ -149,16 +149,18 @@ def killtree(pid):
 async def run(args):
     # Setup command history
     histfile = os.path.join(
-        os.environ.get("XTP_PLUGIN_CACHE_DIR", "/tmp"), ".mcpx-client-history"
+        os.environ.get("XTP_PLUGIN_CACHE_DIR", os.environ["HOME"]),
+        ".mcpx-client-history",
     )
     try:
-        os.makedirs(os.path.dirname(histfile), exist_ok=True)
         readline.set_history_length(1000)
 
         # Try to read existing history
         try:
             readline.read_history_file(histfile)
         except FileNotFoundError:
+            pass
+        except PermissionError:
             pass
 
         # Register history save on exit
