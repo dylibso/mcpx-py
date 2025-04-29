@@ -98,11 +98,14 @@ async def chat_loop(chat):
                 if isinstance(part, pydantic_ai.messages.TextPart):
                     print(part.content)
                 elif isinstance(part, pydantic_ai.messages.ToolCallPart):
+                    args = part.args
+                    if isinstance(args, str):
+                        args = json.loads(args)
                     if part.tool_name == "final_result":
-                        print(part.args["response"])
+                        print(args["response"])
                     else:
                         print(
-                            f">> Tool: {part.tool_name} ({part.tool_call_id}) input={part.args}"
+                            f">> Tool: {part.tool_name} ({part.tool_call_id}) input={args}"
                         )
     except Exception:
         print("\nERROR>>", traceback.format_exc())
