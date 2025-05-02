@@ -8,6 +8,7 @@ import json
 import psutil
 import traceback
 import logging
+from pydoc import locate
 
 from dotenv import load_dotenv
 
@@ -133,7 +134,7 @@ async def chat_cmd(client, args):
         m,
         client=client,
         system_prompt=args.system,
-        result_type=args.format,
+        result_type=locate(args.format),
         ignore_tools=args.ignore,
     )
 
