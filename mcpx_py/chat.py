@@ -198,7 +198,7 @@ class Chat:
         profile = input["profile"]
         if "/" not in profile:
             profile = "~/" + profile
-        self.agent.set_profile(profile)
+        self.agent.profile = profile
         return f"Active profile set to {profile}"
 
     def _tool_mcp_run_current_profile(self, input: TypedDict("CurrentProfile", {})):

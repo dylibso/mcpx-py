@@ -18,6 +18,9 @@ dev-dependencies = [
     "ruff>=0.8.1",
 ]
 
+[tool.uv.sources]
+mcpx-pydantic-ai = { git = "https://github.com/dylibso/mcpx-pydantic-ai", branch = "sse-only" }
+
 [project.scripts]
 mcpx-client = "mcpx_py.__main__:main"
 
