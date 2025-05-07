@@ -71,9 +71,16 @@ class Chat:
 
     def send_message_sync(self, msg, *args, **kw):
         """
-        Send a chat message to the LLM
+        Send a chat message to the LLM synchronously
+        
+        This creates a new event loop to run the async send_message method.
         """
-        asyncio.run(self.send_message(msg, *args, **kw))
+        # Create a new event loop to avoid warnings about coroutines not being awaited
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(self.send_message(msg, *args, **kw))
+        finally:
+            loop.close()
 
     async def iter(self, msg, *args, **kw):
         """
@@ -119,5 +126,11 @@ class Chat:
         """
         async with self.agent.run_mcp_servers():
             with pydantic_ai.capture_run_messages() as messages:
-                res = await self.send_message(msg, *args, **kw)
+                res = await self.agent.run(
+                    msg,
+                    message_history=self.history,
+                    *args,
+                    **kw,
+                )
+            # Don't update history here since we're just inspecting
         return res, messages
