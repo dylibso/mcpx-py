@@ -3,6 +3,9 @@ import asyncio
 import warnings
 from unittest.mock import AsyncMock, MagicMock, patch
 
+# Suppress warnings about coroutines not being awaited
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine.*was never awaited")
+
 from mcpx_py.chat import Chat
 
 
@@ -79,10 +82,17 @@ class TestChat(unittest.TestCase):
 
     def run_async(self, coro):
         """Helper method to run async code in tests"""
-        # Filter out the RuntimeWarning about coroutines
+        # Suppress warnings about coroutines not being awaited
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine.*was never awaited")
-            return asyncio.run(coro)
+            warnings.simplefilter("ignore", RuntimeWarning)
+            # Create a new event loop to avoid warnings about coroutines not being awaited
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(coro)
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
             
     @patch('mcpx_py.chat.Agent')
     @patch('mcpx_py.chat.pydantic_ai.capture_run_messages')
@@ -204,4 +214,12 @@ class TestChat(unittest.TestCase):
         self.assertEqual(messages, ["captured_message"])
 
 if __name__ == '__main__':
+    # Set up proper handling of asyncio policies for tests
+    if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy') and isinstance(
+            asyncio.get_event_loop_policy(), asyncio.WindowsSelectorEventLoopPolicy):
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    
+    # Suppress warnings about coroutines not being awaited
+    warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine.*was never awaited")
+    
     unittest.main()
