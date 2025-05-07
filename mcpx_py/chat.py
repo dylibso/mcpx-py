@@ -1,12 +1,7 @@
 from mcpx_pydantic_ai import Agent, pydantic_ai
 
-from mcp_run.client import _convert_type
 
-
-from typing import TypedDict
-import traceback
-
-from . import builtin_tools
+import asyncio
 
 
 SYSTEM_PROMPT = """
@@ -35,7 +30,6 @@ class Chat:
     def __init__(
         self,
         *args,
-        ignore_builtin_tools: bool = False,
         **kw,
     ):
         if "system_prompt" not in kw:
@@ -45,33 +39,7 @@ class Chat:
             *args,
             **kw,
         )
-        if not ignore_builtin_tools:
-            self._register_builtins()
         self.history = []
-
-    def _register_builtins(self):
-        for tool in builtin_tools.TOOLS:
-
-            def wrap(tool, inner):
-                props = tool.input_schema["properties"]
-                t = {k: _convert_type(v["type"]) for k, v in props.items()}
-                InputType = TypedDict("Input", t)
-
-                def f(input: InputType):
-                    try:
-                        return inner(input)
-                    except Exception as exc:
-                        return f"ERROR call to tool {tool.name} failed: {traceback.format_exception(exc)}"
-
-                return f
-
-            self.agent._register_tool(
-                pydantic_ai.Tool(
-                    wrap(tool, getattr(self, "_tool_" + tool.name)),
-                    name=tool.name,
-                    description=tool.description,
-                )
-            )
 
     @property
     def client(self):
@@ -90,117 +58,66 @@ class Chat:
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = await self.agent.run(
-                msg,
-                message_history=self.history,
-                *args,
-                **kw,
-            )
-        self.history.extend(messages)
+        async with self.agent.run_mcp_servers():
+            with pydantic_ai.capture_run_messages() as messages:
+                res = await self.agent.run(
+                    msg,
+                    message_history=self.history,
+                    *args,
+                    **kw,
+                )
+            self.history.extend(messages)
         return res
 
     def send_message_sync(self, msg, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = self.agent.run_sync(
-                msg,
-                message_history=self.history,
-                *args,
-                **kw,
-            )
-        self.history.extend(messages)
-        return res
+        asyncio.run(self.send_message(msg, *args, **kw))
 
     async def iter(self, msg, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            async with self.agent.iter(
-                msg, message_history=self.history, *args, **kw
-            ) as run:
-                async for node in run:
-                    yield node
+        async with self.agent.run_mcp_servers():
+            with pydantic_ai.capture_run_messages() as messages:
+                async with self.agent.iter(
+                    msg, message_history=self.history, *args, **kw
+                ) as run:
+                    async for node in run:
+                        yield node
         self.history.extend(messages)
 
     async def iter_content(self, msg, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            async with self.agent.iter(
-                msg, message_history=self.history, *args, **kw
-            ) as run:
-                async for node in run:
-                    if hasattr(node, "response"):
-                        content = node.response
-                    elif hasattr(node, "model_response"):
-                        content = node.model_response
-                    elif hasattr(node, "request"):
-                        content = node.request
-                    elif hasattr(node, "model_request"):
-                        content = node.model_request
-                    elif hasattr(node, "data"):
-                        content = node.data
-                    else:
-                        continue
-                    yield content
-        self.history.extend(messages)
+        async with self.agent.run_mcp_servers():
+            with pydantic_ai.capture_run_messages() as messages:
+                async with self.agent.iter(
+                    msg, message_history=self.history, *args, **kw
+                ) as run:
+                    async for node in run:
+                        if hasattr(node, "response"):
+                            content = node.response
+                        elif hasattr(node, "model_response"):
+                            content = node.model_response
+                        elif hasattr(node, "request"):
+                            content = node.request
+                        elif hasattr(node, "model_request"):
+                            content = node.model_request
+                        elif hasattr(node, "data"):
+                            content = node.data
+                        else:
+                            continue
+                        yield content
+            self.history.extend(messages)
 
     async def inspect(self, msg, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = await self.send_message(msg, *args, **kw)
+        async with self.agent.run_mcp_servers():
+            with pydantic_ai.capture_run_messages() as messages:
+                res = await self.send_message(msg, *args, **kw)
         return res, messages
-
-    def _tool_mcp_run_search_servlets(
-        self, input: TypedDict("SearchServlets", {"q": str})
-    ):
-        q = input.get("q", "")
-        if q == "":
-            return "ERROR: provide a query when searching"
-        x = []
-        for r in self.agent.client.search(input["q"]):
-            x.append(
-                {
-                    "slug": r.slug,
-                    "schema": {
-                        "name": r.meta.get("name"),
-                        "description": r.meta.get("description"),
-                    },
-                    "installation_count": r.installation_count,
-                }
-            )
-        return x
-
-    def _tool_mcp_run_get_profiles(self, input: TypedDict("GetProfile", {})):
-        p = []
-        for user, u in self.agent.client.profiles.items():
-            if user == "~":
-                continue
-            for profile in u.values():
-                p.append(
-                    {
-                        "name": f"{user}/{profile.slug}",  # Assume slug is string
-                        "description": profile.description,
-                    }
-                )
-        return p
-
-    def _tool_mcp_run_set_profile(
-        self, input: TypedDict("SetProfile", {"profile": str})
-    ):
-        profile = input["profile"]
-        if "/" not in profile:
-            profile = "~/" + profile
-        self.agent.profile = profile
-        return f"Active profile set to {profile}"
-
-    def _tool_mcp_run_current_profile(self, input: TypedDict("CurrentProfile", {})):
-        """Get current profile name"""
-        return self.agent.client.config.profile
