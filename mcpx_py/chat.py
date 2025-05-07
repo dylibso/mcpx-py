@@ -1,7 +1,10 @@
 from mcpx_pydantic_ai import Agent, pydantic_ai
 
+from mcp_run.client import _convert_type
+
 
 from typing import TypedDict
+import traceback
 
 from . import builtin_tools
 
@@ -48,7 +51,27 @@ class Chat:
 
     def _register_builtins(self):
         for tool in builtin_tools.TOOLS:
-            self.agent.register_tool(tool, getattr(self, "_tool_" + tool.name))
+
+            def wrap(tool, inner):
+                props = tool.input_schema["properties"]
+                t = {k: _convert_type(v["type"]) for k, v in props.items()}
+                InputType = TypedDict("Input", t)
+
+                def f(input: InputType):
+                    try:
+                        return inner(input)
+                    except Exception as exc:
+                        return f"ERROR call to tool {tool.name} failed: {traceback.format_exception(exc)}"
+
+                return f
+
+            self.agent._register_tool(
+                pydantic_ai.Tool(
+                    wrap(tool, getattr(self, "_tool_" + tool.name)),
+                    name=tool.name,
+                    description=tool.description,
+                )
+            )
 
     @property
     def client(self):
