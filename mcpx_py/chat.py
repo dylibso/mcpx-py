@@ -1,9 +1,7 @@
 from mcpx_pydantic_ai import Agent, pydantic_ai
 
 
-from typing import TypedDict
-
-from . import builtin_tools
+import asyncio
 
 
 SYSTEM_PROMPT = """
@@ -32,7 +30,6 @@ class Chat:
     def __init__(
         self,
         *args,
-        ignore_builtin_tools: bool = False,
         **kw,
     ):
         if "system_prompt" not in kw:
@@ -42,13 +39,7 @@ class Chat:
             *args,
             **kw,
         )
-        if not ignore_builtin_tools:
-            self._register_builtins()
         self.history = []
-
-    def _register_builtins(self):
-        for tool in builtin_tools.TOOLS:
-            self.agent.register_tool(tool, getattr(self, "_tool_" + tool.name))
 
     @property
     def client(self):
@@ -63,121 +54,126 @@ class Chat:
         """
         self.history = []
 
-    async def send_message(self, msg: str, *args, **kw):
+    async def send_message(self, msg: str, run_mcp_servers: bool = True, *args, **kw):
         """
         Send a chat message to the LLM
         """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = await self.agent.run(
-                msg,
-                message_history=self.history,
-                *args,
-                **kw,
-            )
-        self.history.extend(messages)
-        return res
 
-    def send_message_sync(self, msg, *args, **kw):
-        """
-        Send a chat message to the LLM
-        """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = self.agent.run_sync(
-                msg,
-                message_history=self.history,
-                *args,
-                **kw,
-            )
-        self.history.extend(messages)
-        return res
-
-    async def iter(self, msg, *args, **kw):
-        """
-        Send a chat message to the LLM
-        """
-        with pydantic_ai.capture_run_messages() as messages:
-            async with self.agent.iter(
-                msg, message_history=self.history, *args, **kw
-            ) as run:
-                async for node in run:
-                    yield node
-        self.history.extend(messages)
-
-    async def iter_content(self, msg, *args, **kw):
-        """
-        Send a chat message to the LLM
-        """
-        with pydantic_ai.capture_run_messages() as messages:
-            async with self.agent.iter(
-                msg, message_history=self.history, *args, **kw
-            ) as run:
-                async for node in run:
-                    if hasattr(node, "response"):
-                        content = node.response
-                    elif hasattr(node, "model_response"):
-                        content = node.model_response
-                    elif hasattr(node, "request"):
-                        content = node.request
-                    elif hasattr(node, "model_request"):
-                        content = node.model_request
-                    elif hasattr(node, "data"):
-                        content = node.data
-                    else:
-                        continue
-                    yield content
-        self.history.extend(messages)
-
-    async def inspect(self, msg, *args, **kw):
-        """
-        Send a chat message to the LLM
-        """
-        with pydantic_ai.capture_run_messages() as messages:
-            res = await self.send_message(msg, *args, **kw)
-        return res, messages
-
-    def _tool_mcp_run_search_servlets(
-        self, input: TypedDict("SearchServlets", {"q": str})
-    ):
-        q = input.get("q", "")
-        if q == "":
-            return "ERROR: provide a query when searching"
-        x = []
-        for r in self.agent.client.search(input["q"]):
-            x.append(
-                {
-                    "slug": r.slug,
-                    "schema": {
-                        "name": r.meta.get("name"),
-                        "description": r.meta.get("description"),
-                    },
-                    "installation_count": r.installation_count,
-                }
-            )
-        return x
-
-    def _tool_mcp_run_get_profiles(self, input: TypedDict("GetProfile", {})):
-        p = []
-        for user, u in self.agent.client.profiles.items():
-            if user == "~":
-                continue
-            for profile in u.values():
-                p.append(
-                    {
-                        "name": f"{user}/{profile.slug}",  # Assume slug is string
-                        "description": profile.description,
-                    }
+        async def inner():
+            with pydantic_ai.capture_run_messages() as messages:
+                return (
+                    await self.agent.run(
+                        msg,
+                        message_history=self.history,
+                        *args,
+                        **kw,
+                    ),
+                    messages,
                 )
-        return p
 
-    def _tool_mcp_run_set_profile(
-        self, input: TypedDict("SetProfile", {"profile": str})
-    ):
-        profile = input["profile"]
-        if "/" not in profile:
-            profile = "~/" + profile
-        self.agent.set_profile(profile)
-        return f"Active profile set to {profile}"
+        if run_mcp_servers:
+            async with self.agent.run_mcp_servers():
+                res, messages = await inner()
+        else:
+            res, messages = await inner()
+        self.history.extend(messages)
+        return res
 
-    def _tool_mcp_run_current_profile(self, input: TypedDict("CurrentProfile", {})):
-        """Get current profile name"""
-        return self.agent.client.config.profile
+    def send_message_sync(self, *args, **kw):
+        """
+        Send a chat message to the LLM synchronously
+
+        This creates a new event loop to run the async send_message method.
+        """
+        # Create a new event loop to avoid warnings about coroutines not being awaited
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(self.send_message(*args, **kw))
+        finally:
+            loop.close()
+
+    async def iter(self, msg: str, run_mcp_servers: bool = True, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+
+        async def inner():
+            with pydantic_ai.capture_run_messages() as messages:
+                async with self.agent.iter(
+                    msg, message_history=self.history, *args, **kw
+                ) as run:
+                    async for node in run:
+                        yield node
+            self.history.extend(messages)
+
+        if run_mcp_servers:
+            async with self.agent.run_mcp_servers():
+                async for msg in inner():
+                    yield msg
+        else:
+            async for msg in inner():
+                yield msg
+
+    async def iter_content(self, msg: str, run_mcp_servers: bool = True, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+
+        async def inner():
+            with pydantic_ai.capture_run_messages() as messages:
+                async with self.agent.iter(
+                    msg, message_history=self.history, *args, **kw
+                ) as run:
+                    async for node in run:
+                        if hasattr(node, "response"):
+                            content = node.response
+                        elif hasattr(node, "model_response"):
+                            content = node.model_response
+                        elif hasattr(node, "request"):
+                            content = node.request
+                        elif hasattr(node, "model_request"):
+                            content = node.model_request
+                        elif hasattr(node, "data"):
+                            content = node.data
+                        elif hasattr(node, "output"):
+                            content = node
+                        else:
+                            continue
+                        yield content
+            self.history.extend(messages)
+
+        f = inner()
+        if run_mcp_servers:
+            async with self.agent.run_mcp_servers():
+                async for msg in f:
+                    yield msg
+        else:
+            async for msg in f:
+                yield msg
+
+    async def inspect(self, msg: str, run_mcp_servers: bool = True, *args, **kw):
+        """
+        Send a chat message to the LLM
+        """
+
+        async def inner():
+            with pydantic_ai.capture_run_messages() as messages:
+                res = await self.agent.run(
+                    msg,
+                    message_history=self.history,
+                    *args,
+                    **kw,
+                )
+            return res, messages
+
+        if run_mcp_servers:
+            async with self.agent.run_mcp_servers():
+                return await inner()
+        else:
+            return await inner()
+
+    async def list_tools(self):
+        async with self.client.mcp_sse(self.agent.client.profile).connect() as session:
+            tools = await session.list_tools()
+            for tool in tools.tools:
+                yield tool
