@@ -119,7 +119,7 @@ async def chat_loop(chat):
     return True
 
 
-async def chat_cmd(client, args):
+async def chat_cmd(client: Client, args):
     m = args.model
     if args.provider:
         if args.provider == "ollama" or args.provider == "llama":
