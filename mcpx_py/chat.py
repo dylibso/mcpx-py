@@ -73,9 +73,9 @@ class Chat:
 
         if run_mcp_servers:
             async with self.agent.run_mcp_servers():
-                messages, res = await inner()
+                res, messages = await inner()
         else:
-            messages, res = await inner()
+            res, messages = await inner()
         self.history.extend(messages)
         return res
 
