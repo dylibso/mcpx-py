@@ -50,10 +50,11 @@ async def tool_cmd(client, args):
 
 
 EXIT_COUNT = 0
+CACHED_TOOLS = []
 
 
 async def chat_loop(chat):
-    global EXIT_COUNT
+    global EXIT_COUNT, CACHED_TOOLS
     try:
         msg = input("> ").strip()
         EXIT_COUNT = 0
@@ -77,8 +78,15 @@ async def chat_loop(chat):
                 print("Chat history cleared")
                 return True
             elif msg == "!tools":
+                if len(CACHED_TOOLS) > 0:
+                    tools = CACHED_TOOLS
+                else:
+                    tools = []
+                    async for tool in chat.list_tools():
+                        tools.append(tool)
+                    CACHED_TOOLS = tools
                 print("\nAvailable tools:")
-                for tool in chat.agent._function_tools.values():
+                for tool in tools:
                     if tool is None:
                         continue
                     print(f"- {tool.name.strip()}")
@@ -93,8 +101,9 @@ async def chat_loop(chat):
         if msg == "":
             return True
         async for res in chat.iter_content(msg):
-            if not isinstance(res, pydantic_ai.models.ModelResponse):
+            if not hasattr(res, "parts"):
                 continue
+
             for part in res.parts:
                 if isinstance(part, pydantic_ai.messages.TextPart):
                     print(part.content)
@@ -102,12 +111,9 @@ async def chat_loop(chat):
                     args = part.args
                     if isinstance(args, str):
                         args = json.loads(args)
-                    if part.tool_name == "final_result":
-                        print(args["response"])
-                    else:
-                        print(
-                            f">> Tool: {part.tool_name} ({part.tool_call_id}) input={args}"
-                        )
+                    print(
+                        f">> Tool: {part.tool_name} ({part.tool_call_id}) input={args}"
+                    )
     except Exception:
         print("\nERROR>>", traceback.format_exc())
     return True
